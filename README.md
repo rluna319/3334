@@ -1,5 +1,4 @@
-# 3334
-Systems Programming
+# Systems Programming (3334)
 
 This is a dedicated repository to manage project files for the Systems Programming 3334 course.
 
