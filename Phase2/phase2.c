@@ -14,74 +14,81 @@ void help ();
 void assemble (char *);
 
 
-//-----------------------Structures----------------------------//  
+//-----------------------Structures + Functions---------------//  
 
+//						--Start OpTable--
 struct OpTable
 {
 	char instruction[6];		//instruction
-	unsigned char opcode[6];	//opcode
+	short opcode;				//opcode
+	char directive[6];			//directive operand
+};
+struct OpTable OPTAB[31];	//OpTable array (31 total operands)
 
-	//builds optable
-	OpTable();
+//builds optable
+void OpTable();
 
-} OPTAB[31]; //OpTable array
+//						--End OpTable--
 
+//						--Start SymbolTable--
 struct SymbolTable
 {
 	char label[6];		//label (max = 6 chars)(alphanumeric)
 	int address;		//label address
 	int count;			//tracks # of labels being inserted into the table
+};
+struct SymbolTable SYMTAB [500];	//SymbolTable array (max = 500 labels)
 
-	//initializes address value to -1
-	SymbolTable():address(-1){}
+//initializes address value to -1
+//void SymbolTable();
 
-} SYMTAB [500];	//SymbolTable array (max = 500 labels)
+//						--End SymbolTable--
 
+//						--Start ErrorFlag--
+struct ErrorFlag {char output[100];};	
+struct ErrorFlag Error[9]; //ErrorFlag array of strings (total of 9 possible errors in phase2)
 
-struct ErrorFlag
-{
-	char output[100];
+	void ErrorFlag();	//initializes Error definitions
 
-	ErrorFlag();
+	void Error0(){printf("%s\n", Error[0].output);}
+	void Error1(){printf("%s\n", Error[1].output);}
+	void Error2(){printf("%s\n", Error[2].output);}
+	void Error3(){printf("%s\n", Error[3].output);}
+	void Error4(){printf("%s\n", Error[4].output);}
+	void Error5(){printf("%s\n", Error[5].output);}
+	void Error6(){printf("%s\n", Error[6].output);}
+	void Error7(){printf("%s\n", Error[7].output);}
+	void Error8(){printf("%s\n", Error[8].output);}
+	//void Error9(){printf("%s\n", Error[9].output);}
+	//void Error10(){printf("%s\n", Error[10].output);}
 
-	Error0(){printf("%s\n", Error[0].output);}
-	Error1(){printf("%s\n", Error[1].output);}
-	Error2(){printf("%s\n", Error[2].output);}
-	Error3(){printf("%s\n", Error[3].output);}
-	Error4(){printf("%s\n", Error[4].output);}
-	Error5(){printf("%s\n", Error[5].output);}
-	Error6(){printf("%s\n", Error[6].output);}
-	Error7(){printf("%s\n", Error[7].output);}
-	Error8(){printf("%s\n", Error[8].output);}
-	//Error9(){printf("%s\n", Error[9].output);}
-	//Error10(){printf("%s\n", Error[10].output);}
-	
-} Error[9];	//ErrorFlag array of strings (total of 9 possible errors in phase2)
+//						--End ErrorFlag--
 
-
-//-----------------------File Declarations----------------------//
+//-----------------------File Declarations--------------------//
 
 FILE *source, *intermediate, *symboltable;
 
 
-//-----------------------Program Functions----------------------//  
+//-----------------------Program Functions--------------------//  
 
+//splits char array (string)
 void split (char *, char *, char *, char *, int *);
 
 
-//-----------------------Global Variables-----------------------//
+//-----------------------Global Variables---------------------//
 
 int location; //location counter
 int start;	//program start location
 int progLen;	//legnth of program
 int end;	//program end location
-string progName;	//name of program
+char progName[20];	//name of program
 char token[500];	//token string
 char line[500];		//stores line in file
-char delimiter[2]	//holds delimiters for tokenizing source line
+char delimiter[2];	//holds delimiters for tokenizing source line
 
 
-//--------------------------------------------------------------//  
+//------------------------Program-----------------------------//  
+
 int main()
 {
 
@@ -375,111 +382,136 @@ void assemble(char *prm1)
 }
 
 //build/initialize OpTable
-OpTable::OpTable()
+void OpTable()
 {
-	OPTAB[0].instruction = "ADD";
-	OPTAB[0].opcode = "18";
+	strcpy(OPTAB[0].instruction, "ADD");
+	OPTAB[0].opcode = 0x8;
+	strcpy(OPTAB[0].directive, "");
 
-	OPTAB[1].instruction = "AND";
-	OPTAB[1].opcode = "58";
+	strcpy(OPTAB[1].instruction, "AND");
+	OPTAB[1].opcode = 0x58;
+	strcpy(OPTAB[1].directive, "");
 
-	OPTAB[2].instruction = "COMP";
-	OPTAB[2].opcode = "28";
+	strcpy(OPTAB[2].instruction, "COMP");
+	OPTAB[2].opcode = 0x28;
+	strcpy(OPTAB[2].directive, "");
 
-	OPTAB[3].instruction = "DIV";
-	OPTAB[3].opcode = "24";
+	strcpy(OPTAB[3].instruction, "DIV");
+	OPTAB[3].opcode = 0x24;
+	strcpy(OPTAB[3].directive, "");
 
-	OPTAB[4].instruction = "J";
-	OPTAB[4].opcode = "3C";
+	strcpy(OPTAB[4].instruction, "J");
+	OPTAB[4].opcode = 0x3C;
+	strcpy(OPTAB[4].directive, "");
 
-	OPTAB[5].instruction = "JEQ";
-	OPTAB[5].opcode = "30";
+	strcpy(OPTAB[5].instruction, "JEQ");
+	OPTAB[5].opcode = 0x30;
+	strcpy(OPTAB[5].directive, "");
 
-	OPTAB[6].instruction = "JGT";
-	OPTAB[6].opcode = "34";
+	strcpy(OPTAB[6].instruction, "JGT");
+	OPTAB[6].opcode = 0x34;
+	strcpy(OPTAB[6].directive, "");
 
-	OPTAB[7].instruction = "JLT";
-	OPTAB[7].opcode = "38";
+	strcpy(OPTAB[7].instruction, "JLT");
+	OPTAB[7].opcode = 0x38;
+	strcpy(OPTAB[7].directive, "");
 
-	OPTAB[8].instruction = "JSUB";
-	OPTAB[8].opcode = "48";
+	strcpy(OPTAB[8].instruction, "JSUB");
+	OPTAB[8].opcode = 0x48;
+	strcpy(OPTAB[8].directive, "");
 
-	OPTAB[9].instruction = "LDA";
-	OPTAB[9].opcode = "00";
+	strcpy(OPTAB[9].instruction, "LDA");
+	OPTAB[9].opcode = 0x00;
+	strcpy(OPTAB[9].directive, "");
 
-	OPTAB[10].instruction = "LDCH";
-	OPTAB[10].opcode = "50";
+	strcpy(OPTAB[10].instruction, "LDCH");
+	OPTAB[10].opcode = 0x50;
+	strcpy(OPTAB[10].directive, "");
 
-	OPTAB[11].instruction = "LDL";
-	OPTAB[11].opcode = "08";
+	strcpy(OPTAB[11].instruction, "LDL");
+	OPTAB[11].opcode = 0x08;
+	strcpy(OPTAB[11].directive, "");
 
-	OPTAB[12].instruction = "LDX";
-	OPTAB[12].opcode = "04";
+	strcpy(OPTAB[12].instruction, "LDX");
+	OPTAB[12].opcode = 0x04;
+	strcpy(OPTAB[12].directive, "");
 
-	OPTAB[13].instruction = "MUL";
-	OPTAB[13].opcode = "20";
+	strcpy(OPTAB[13].instruction, "MUL");
+	OPTAB[13].opcode = 0x20;
+	strcpy(OPTAB[13].directive, "");
 
-	OPTAB[14].instruction = "OR";
-	OPTAB[14].opcode = "44";
+	strcpy(OPTAB[14].instruction, "OR");
+	OPTAB[14].opcode = 0x44;
+	strcpy(OPTAB[14].directive, "");
 
-	OPTAB[15].instruction = "RD";
-	OPTAB[15].opcode = "D8";
+	strcpy(OPTAB[15].instruction, "RD");
+	OPTAB[15].opcode = 0xD8;
+	strcpy(OPTAB[15].directive, "");
 
-	OPTAB[16].instruction = "RSUB";
-	OPTAB[16].opcode = "4C";
+	strcpy(OPTAB[16].instruction, "RSUB");
+	OPTAB[16].opcode = 0x4C;
+	strcpy(OPTAB[16].directive, "");
 
-	OPTAB[17].instruction = "STA";
-	OPTAB[17].opcode = "0C";
+	strcpy(OPTAB[17].instruction, "STA");
+	OPTAB[17].opcode = 0x0C;
+	strcpy(OPTAB[17].directive, "");
 
-	OPTAB[18].instruction = "STCH";
-	OPTAB[18].opcode = "54";
+	strcpy(OPTAB[18].instruction, "STCH");
+	OPTAB[18].opcode = 0x54;
+	strcpy(OPTAB[18].directive, "");
 
-	OPTAB[19].instruction = "STL";
-	OPTAB[19].opcode = "14";
+	strcpy(OPTAB[19].instruction, "STL");
+	OPTAB[19].opcode = 0x14;
+	strcpy(OPTAB[19].directive, "");
 
-	OPTAB[20].instruction = "STX";
-	OPTAB[20].opcode = "10";
+	strcpy(OPTAB[20].instruction, "STX");
+	OPTAB[20].opcode = 0x10;
+	strcpy(OPTAB[20].directive, "");
 
-	OPTAB[21].instruction = "SUB";
-	OPTAB[21].opcode = "1C";
+	strcpy(OPTAB[21].instruction, "SUB");
+	OPTAB[21].opcode = 0x1C;
+	strcpy(OPTAB[21].directive, "");
 
-	OPTAB[22].instruction = "TD";
-	OPTAB[22].opcode = "E0";
+	strcpy(OPTAB[22].instruction, "TD");
+	OPTAB[22].opcode = 0xE0;
+	strcpy(OPTAB[22].directive, "");
 
-	OPTAB[23].instruction = "TIX";
-	OPTAB[23].opcode = "2C";
+	strcpy(OPTAB[23].instruction, "TIX");
+	OPTAB[23].opcode = 0x2C;
+	strcpy(OPTAB[23].directive, "");
 
-	OPTAB[24].instruction = "WD";
-	OPTAB[24].opcode = "DC";
+	strcpy(OPTAB[24].instruction, "WD");
+	OPTAB[24].opcode = 0xDC;
+	strcpy(OPTAB[24].directive, "");
 
-	OPTAB[25].instruction = "START";
-	OPTAB[25].opcode = "START";
+	strcpy(OPTAB[25].instruction, "START");
+	strcpy(OPTAB[25].directive, "START");
 
-	OPTAB[26].instruction = "END";
-	OPTAB[26].opcode = "END";
+	strcpy(OPTAB[26].instruction, "END");
+	strcpy(OPTAB[26].directive, "END");
 
-	OPTAB[27].instruction = "BYTE";
-	OPTAB[27].opcode = "BYTE";
+	strcpy(OPTAB[27].instruction, "BYTE");
+	strcpy(OPTAB[27].directive, "BYTE");
 
-	OPTAB[28].instruction = "WORD";
-	OPTAB[28].opcode = "WORD";
+	strcpy(OPTAB[28].instruction, "WORD");
+	strcpy(OPTAB[28].directive, "WORD");
 
-	OPTAB[29].instruction = "RESB";
-	OPTAB[29].opcode = "RESB";
+	strcpy(OPTAB[29].instruction, "RESB");
+	strcpy(OPTAB[29].directive, "RESB");
 
-	OPTAB[30].instruction = "RESW";
-	OPTAB[30].opcode = "RESW";
+	strcpy(OPTAB[30].instruction, "RESW");
+	strcpy(OPTAB[30].directive, "RESW");
 }
 
-ErrorFlag::ErrorFlag()
+void ErrorFlag()
 {
-	Error[0].output = " |Error: Duplicate label found| ";
-	Error[1].output = " |Error: Illegal label| ";
-	Error[2].output = " |Error: Illegal operation| ";
-	Error[3].output = " |Error: Missing or illegal operand on data storage directive| ";
-	Error[4].output = " |Error: Missing or illegal operand on START directive| ";
-	Error[5].output = " |Error: Missing or illegal operand on END directive| ";
-	Error[6].output = " |Error: Too many symbols in source program| ";
-	Error[7].output = " |Error: Program too long| ";
-	Error[8].output = " |Error: Unable to open file for writing| ";
+	strcpy(Error[0].output, " |Error: Duplicate label found| ");
+	strcpy(Error[1].output, " |Error: Illegal label| ");
+	strcpy(Error[2].output, " |Error: Illegal operation| ");
+	strcpy(Error[3].output, " |Error: Missing or illegal operand on data storage directive| ");
+	strcpy(Error[4].output, " |Error: Missing or illegal operand on START directive| ");
+	strcpy(Error[5].output, " |Error: Missing or illegal operand on END directive| ");
+	strcpy(Error[6].output, " |Error: Too many symbols in source program| ");
+	strcpy(Error[7].output, " |Error: Program too long| ");
+	strcpy(Error[8].output, " |Error: Unable to open file for writing| ");
 }
