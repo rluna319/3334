@@ -4,9 +4,8 @@
 #include <stdbool.h>
 #include <ctype.h>
 
-//-------------------------------------------------------------//
+//-----------------------SIC Commands--------------------------//
 
-void split (char *, char *, char *, char *, int *);
 void loadf (char *);
 void execute (char *);
 void debug ();
@@ -14,8 +13,75 @@ void dump (char *, char *);
 void help ();
 void assemble (char *);
 
-//-------------------------------------------------------------//  
 
+//-----------------------Structures----------------------------//  
+
+struct OpTable
+{
+	char instruction[6];		//instruction
+	unsigned char opcode[6];	//opcode
+
+	//builds optable
+	OpTable();
+
+} OPTAB[31]; //OpTable array
+
+struct SymbolTable
+{
+	char label[6];		//label (max = 6 chars)(alphanumeric)
+	int address;		//label address
+	int count;			//tracks # of labels being inserted into the table
+
+	//initializes address value to -1
+	SymbolTable():address(-1){}
+
+} SYMTAB [500];	//SymbolTable array (max = 500 labels)
+
+
+struct ErrorFlag
+{
+	char output[100];
+
+	ErrorFlag();
+
+	Error0(){printf("%s\n", Error[0].output);}
+	Error1(){printf("%s\n", Error[1].output);}
+	Error2(){printf("%s\n", Error[2].output);}
+	Error3(){printf("%s\n", Error[3].output);}
+	Error4(){printf("%s\n", Error[4].output);}
+	Error5(){printf("%s\n", Error[5].output);}
+	Error6(){printf("%s\n", Error[6].output);}
+	Error7(){printf("%s\n", Error[7].output);}
+	Error8(){printf("%s\n", Error[8].output);}
+	//Error9(){printf("%s\n", Error[9].output);}
+	//Error10(){printf("%s\n", Error[10].output);}
+	
+} Error[9];	//ErrorFlag array of strings (total of 9 possible errors in phase2)
+
+
+//-----------------------File Declarations----------------------//
+
+FILE *source, *intermediate, *symboltable;
+
+
+//-----------------------Program Functions----------------------//  
+
+void split (char *, char *, char *, char *, int *);
+
+
+//-----------------------Global Variables-----------------------//
+
+int location; //location counter
+int start;	//program start location
+int progLen;	//legnth of program
+int end;	//program end location
+string progName;	//name of program
+char token[500];	//token string
+char line[500];		//stores line in file
+char delimiter[2]	//holds delimiters for tokenizing source line
+
+
+//--------------------------------------------------------------//  
 int main()
 {
 
@@ -230,8 +296,45 @@ void split (char *str, char *cmd, char *prm1, char *prm2, int *n)
 
 void loadf(char *prm1)
 {
-	printf ("'load' command recognized! \n");
-	printf ("Parameter: %s \n", prm1);
+	//Open source file for reading
+	source fopen(prm1, "r");
+	if (source == NULL)		//file not located (stop loadf)
+	{
+		printf ("%s does not exist.\nPlease try again.", prm1);
+		printf ("Remember that filenames are case-sensitive...\n\n");
+		return 0;
+	}
+	else printf ("%s successfully opened!\n", prm1);	//file located (status print)
+
+	//Open intermediate and symbol table files for writing
+	intermediate fopen("Intermediate.txt", "w");
+	symboltable fopen("SymbolTable.txt", "w");
+	if (intermediate == NULL) {Error9();}	//unable to open file for writing
+	else printf ("\n'Intermediate.txt' file created...\n");
+	if (symboltable == NULL) {Error9();}	//unable to open file for writing
+	else printf ("'SymbolTable.txt' file created...\n");
+
+	//status print
+	printf("\n	Beginning Pass 1...\n");
+
+	//initialize OpTable and delimiters
+	OPTAB();
+	delimiter[0] = " ";
+	delimiter[1] = "\t";
+
+	//initial print
+	fprintf(intermediate, "Intermediate File\n");
+	fprintf(intermediate, "--lists source line, location counter, mnemonics, operands, and errors--\n\n");
+
+	//local variables
+	int i = 0;
+
+	while(fgets(line, 500, source))
+	{
+		location += 1;
+		strtok(line, delimiter);
+	}
+
 }
 
 void execute (char *prm1)
@@ -271,3 +374,112 @@ void assemble(char *prm1)
 	printf ("Parameter: %s \n", prm1);
 }
 
+//build/initialize OpTable
+OpTable::OpTable()
+{
+	OPTAB[0].instruction = "ADD";
+	OPTAB[0].opcode = "18";
+
+	OPTAB[1].instruction = "AND";
+	OPTAB[1].opcode = "58";
+
+	OPTAB[2].instruction = "COMP";
+	OPTAB[2].opcode = "28";
+
+	OPTAB[3].instruction = "DIV";
+	OPTAB[3].opcode = "24";
+
+	OPTAB[4].instruction = "J";
+	OPTAB[4].opcode = "3C";
+
+	OPTAB[5].instruction = "JEQ";
+	OPTAB[5].opcode = "30";
+
+	OPTAB[6].instruction = "JGT";
+	OPTAB[6].opcode = "34";
+
+	OPTAB[7].instruction = "JLT";
+	OPTAB[7].opcode = "38";
+
+	OPTAB[8].instruction = "JSUB";
+	OPTAB[8].opcode = "48";
+
+	OPTAB[9].instruction = "LDA";
+	OPTAB[9].opcode = "00";
+
+	OPTAB[10].instruction = "LDCH";
+	OPTAB[10].opcode = "50";
+
+	OPTAB[11].instruction = "LDL";
+	OPTAB[11].opcode = "08";
+
+	OPTAB[12].instruction = "LDX";
+	OPTAB[12].opcode = "04";
+
+	OPTAB[13].instruction = "MUL";
+	OPTAB[13].opcode = "20";
+
+	OPTAB[14].instruction = "OR";
+	OPTAB[14].opcode = "44";
+
+	OPTAB[15].instruction = "RD";
+	OPTAB[15].opcode = "D8";
+
+	OPTAB[16].instruction = "RSUB";
+	OPTAB[16].opcode = "4C";
+
+	OPTAB[17].instruction = "STA";
+	OPTAB[17].opcode = "0C";
+
+	OPTAB[18].instruction = "STCH";
+	OPTAB[18].opcode = "54";
+
+	OPTAB[19].instruction = "STL";
+	OPTAB[19].opcode = "14";
+
+	OPTAB[20].instruction = "STX";
+	OPTAB[20].opcode = "10";
+
+	OPTAB[21].instruction = "SUB";
+	OPTAB[21].opcode = "1C";
+
+	OPTAB[22].instruction = "TD";
+	OPTAB[22].opcode = "E0";
+
+	OPTAB[23].instruction = "TIX";
+	OPTAB[23].opcode = "2C";
+
+	OPTAB[24].instruction = "WD";
+	OPTAB[24].opcode = "DC";
+
+	OPTAB[25].instruction = "START";
+	OPTAB[25].opcode = "START";
+
+	OPTAB[26].instruction = "END";
+	OPTAB[26].opcode = "END";
+
+	OPTAB[27].instruction = "BYTE";
+	OPTAB[27].opcode = "BYTE";
+
+	OPTAB[28].instruction = "WORD";
+	OPTAB[28].opcode = "WORD";
+
+	OPTAB[29].instruction = "RESB";
+	OPTAB[29].opcode = "RESB";
+
+	OPTAB[30].instruction = "RESW";
+	OPTAB[30].opcode = "RESW";
+}
+
+ErrorFlag::ErrorFlag()
+{
+	Error[0].output = " |Error: Duplicate label found| ";
+	Error[1].output = " |Error: Illegal label| ";
+	Error[2].output = " |Error: Illegal operation| ";
+	Error[3].output = " |Error: Missing or illegal operand on data storage directive| ";
+	Error[4].output = " |Error: Missing or illegal operand on START directive| ";
+	Error[5].output = " |Error: Missing or illegal operand on END directive| ";
+	Error[6].output = " |Error: Too many symbols in source program| ";
+	Error[7].output = " |Error: Program too long| ";
+	Error[8].output = " |Error: Unable to open file for writing| ";
+}
