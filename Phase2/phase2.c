@@ -48,7 +48,7 @@ struct SymbolTable SYMTAB [500];	//SymbolTable array (max = 500 labels)
 struct Token 
 {
 	char str[500];		//token
-	int count;			//token count
+	bool hastoken;			//has token?
 };
 struct Token token[4];	//array Token (max of 4 tokens per line)
 
@@ -98,7 +98,7 @@ void Pass1();
 int location = 0; //location counter
 int begin = 0;	//program begin location
 int progLen = 0;	//legnth of program
-int end = 0;	//program end location
+int comment = 0;	//program comment location
 char progName[20];	//name of program
 char line[500];		//stores line in file
 int tcount = 0;
@@ -524,20 +524,25 @@ void ErrorFlag()
 
 void Tokenize(char *line)
 {
-	//booleans for loops
-	bool cont;
-	bool blank;
-	bool end = false;
-	
-	//index for 'token[]'
-	int tok = 0;
+	bool cont;		//continue loop?
+	bool blank;		//blank token?
+	bool comment;		//is there a comment?
+	bool end;		//early end of line?
+	int tok = 0; 	//index var for 'token[]'
+	int i = 0;		//index var for 'line[]'
 
 	T_clear();
+	cont = blank = comment = true;
+	end = false;
 
 	//if line is a comment do not tokenize
-	if (line[0] == '.') return;
+	if (line[0] == '.') 
+	{
+		strcpy(token[3].str, line);
+		return;
+	}
 
-	for (int i = 0; end == false || tok < 4; i++)
+	for (int i = 0; tok < 4; i++)
 	{
 		cont = true;
 		blank = true;
@@ -558,11 +563,11 @@ void Tokenize(char *line)
 				case '\r':
 				case '\v':
 				case '\0':	//if empty char is hit
-					end = true; 
+					if (tok < 3) end = true;
 					cont = false;
 				case '\n':	//if newline is hit
-					end = true;	
-					cont = false; 
+					if (tok < 3) end = true;
+					cont = false;
 				default:
 					blank = false;
 					i++;
@@ -571,22 +576,15 @@ void Tokenize(char *line)
 
 		if(!blank)
 		{
-			memcpy(token[tok].str, &line[begin], (i - begin));
+			memcpy(token[tok].str, &line[begin], (i - 1) - begin);
 			token[tok].str[i - begin + 1] = '\0';
 			tcount++;
-			token[tok].count = tcount;
-			tok++;
-		}
-		else
-		{
-			strcpy(token[tok].str, " ");
-			tcount++;
-			token[tok].count = tcount;
-			tok++;
+			token[tok].hastoken = true;
 		}
 
-		//break when end is flaged
-		if (end == true) break;
+		tok++;
+
+		if (end) break;
 	}
 }
 
@@ -595,11 +593,16 @@ void T_clear()
 	for (int i = 0; i < 4; i++)
 	{
 		strcpy(token[i].str, "\0");
-		token[i].count = 0;
+		token[i].hastoken = false;
 	}
 }
 
 void T_fprint()
+{
+
+}
+
+void Pass1()
 {
 
 }
