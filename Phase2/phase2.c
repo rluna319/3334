@@ -48,7 +48,7 @@ struct SymbolTable SYMTAB [500];	//SymbolTable array (max = 500 labels)
 struct Token 
 {
 	char str[500];		//token
-	bool hastoken;			//has token?
+	bool hastoken;		//has token?
 };
 struct Token token[4];	//array Token (max of 4 tokens per line)
 
@@ -56,7 +56,7 @@ struct Token token[4];	//array Token (max of 4 tokens per line)
 
 //						--Start ErrorFlag--
 struct ErrorFlag {char output[100];};	
-struct ErrorFlag Error[9]; //ErrorFlag array of strings (total of 9 possible errors in phase2)
+struct ErrorFlag Error[10]; //ErrorFlag array of strings (total of 10 possible errors in phase2)
 
 	void ErrorFlag();	//initializes Error definitions
 
@@ -69,7 +69,7 @@ struct ErrorFlag Error[9]; //ErrorFlag array of strings (total of 9 possible err
 	void Error6(){printf("%s\n", Error[6].output);}
 	void Error7(){printf("%s\n", Error[7].output);}
 	void Error8(){printf("%s\n", Error[8].output);}
-	//void Error9(){printf("%s\n", Error[9].output);}
+	void Error9(){printf("%s\n", Error[9].output);}
 	//void Error10(){printf("%s\n", Error[10].output);}
 
 //						--End ErrorFlag--
@@ -91,6 +91,8 @@ void T_clear();
 void T_fprint();
 //Pass 1 (getting errors and writing to the 'symboltable' and 'intermediate' files)
 void Pass1();
+//get line if file being read
+void getLine(char *);
 
 
 //-----------------------Global Variables---------------------//
@@ -101,8 +103,8 @@ int progLen = 0;	//legnth of program
 int comment = 0;	//program comment location
 char progName[20];	//name of program
 char line[500];		//stores line in file
-int tcount = 0;
-char delimiter[2];	//holds delimiters for tokenizing source line
+int tcount = 0;		//token counter
+
 
 
 //------------------------Main--------------------------------//  
@@ -329,26 +331,23 @@ void loadf(char *prm1)
 		printf ("Remember that filenames are case-sensitive...\n\n");
 		return;
 	}
-	else printf ("%s successfully opened!\n", prm1);	//file located
+	else printf ("%s successfully loaded\n", prm1);	//file located
 
 	//Open intermediate and symbol table files for writing
 	intermediate = fopen("Intermediate.txt", "w");
 	symboltable = fopen("SymbolTable.txt", "w");
-	if (intermediate == NULL) {Error8();}	//unable to open file for writing
+	if (intermediate == NULL) {Error8();}	//unable to open intermediate file for writing
 	else printf ("\n'Intermediate.txt' file created...\n");
-	if (symboltable == NULL) {Error8();}	//unable to open file for writing
+	if (symboltable == NULL) {Error9();}	//unable to open symboltable for writing
 	else printf ("'SymbolTable.txt' file created...\n");
 
-	//initialize OpTable and delimiters
+	//initialize OpTable and line array
 	OpTable();
+	strcpy(line, "\0");
 
 	//initial print
 	fprintf(intermediate, "Intermediate File\n");
 	fprintf(intermediate, "--Contatins: source line, location counter, mnemonics, operands, and errors--\n\n");
-
-	//Toenize, Pass 1
-
-	strcpy(line, "\0");
 }
 
 void execute (char *prm1)
@@ -519,20 +518,20 @@ void ErrorFlag()
 	strcpy(Error[5].output, " |Error: Missing or illegal operand on END directive| ");
 	strcpy(Error[6].output, " |Error: Too many symbols in source program| ");
 	strcpy(Error[7].output, " |Error: Program too long| ");
-	strcpy(Error[8].output, " |Error: Unable to open file for writing| ");
+	strcpy(Error[8].output, " |Error: Unable to open Intermediate.txt for writing");
+	strcpy(Error[9].output, " |Error: Unable to open SymbolTable.txt for writing");
 }
 
 void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
 	bool blank;		//blank token?
-	bool comment;		//is there a comment?
 	bool end;		//early end of line?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
-	cont = blank = comment = true;
+	cont = blank = true;
 	end = false;
 
 	//if line is a comment do not tokenize
@@ -542,6 +541,7 @@ void Tokenize(char *line)
 		return;
 	}
 
+	//tokenize loop
 	for (int i = 0; tok < 4; i++)
 	{
 		cont = true;
@@ -604,5 +604,25 @@ void T_fprint()
 
 void Pass1()
 {
+	bool begin = false;		//has start been called?
+	int length;		//length of line
 
+	//initialize 'line[]'
+	for(int i = 0; i < 500; i++) line[i] = '\0';
+
+	printf("Beginning Pass 1...");	//status print
+
+	while(!feof(source) && !begin)
+	{
+		while(fgets(line, 500, source))
+		{
+			length = strcspn(line, "\n") + 1;	//get length of line
+		}
+	}
+
+
+	while(fgets(line, 500, source))
+	{
+
+	}
 }
