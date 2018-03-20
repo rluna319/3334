@@ -44,6 +44,16 @@ struct SymbolTable SYMTAB [500];	//SymbolTable array (max = 500 labels)
 
 //						--End SymbolTable--
 
+//						--Start Token--
+struct Token 
+{
+	char str[500];		//token
+	int count;			//token count
+};
+struct Token token[4];	//array Token (max of 4 tokens per line)
+
+//						--End Token--
+
 //						--Start ErrorFlag--
 struct ErrorFlag {char output[100];};	
 struct ErrorFlag Error[9]; //ErrorFlag array of strings (total of 9 possible errors in phase2)
@@ -73,21 +83,29 @@ FILE *source, *intermediate, *symboltable;
 
 //splits char array (string)
 void split (char *, char *, char *, char *, int *);
+//Taks a string and parses it into tokens
+void Tokenize(char *);
+//Clears token[]
+void T_clear();
+//Prints to file
+void T_fprint();
+//Pass 1 (getting errors and writing to the 'symboltable' and 'intermediate' files)
+void Pass1();
 
 
 //-----------------------Global Variables---------------------//
 
-int location; //location counter
-int start;	//program start location
-int progLen;	//legnth of program
-int end;	//program end location
+int location = 0; //location counter
+int begin = 0;	//program begin location
+int progLen = 0;	//legnth of program
+int end = 0;	//program end location
 char progName[20];	//name of program
-char token[500];	//token string
 char line[500];		//stores line in file
+int tcount = 0;
 char delimiter[2];	//holds delimiters for tokenizing source line
 
 
-//------------------------Program-----------------------------//  
+//------------------------Main--------------------------------//  
 
 int main()
 {
@@ -217,7 +235,7 @@ int main()
 	return 0;
 }
 
-//-------------------------------------------------------------//
+//-----------------------Function Definitions-------------------//  
 
 void split (char *str, char *cmd, char *prm1, char *prm2, int *n)
 {
@@ -304,44 +322,33 @@ void split (char *str, char *cmd, char *prm1, char *prm2, int *n)
 void loadf(char *prm1)
 {
 	//Open source file for reading
-	source fopen(prm1, "r");
+	source = fopen(prm1, "r");
 	if (source == NULL)		//file not located (stop loadf)
 	{
 		printf ("%s does not exist.\nPlease try again.", prm1);
 		printf ("Remember that filenames are case-sensitive...\n\n");
-		return 0;
+		return;
 	}
-	else printf ("%s successfully opened!\n", prm1);	//file located (status print)
+	else printf ("%s successfully opened!\n", prm1);	//file located
 
 	//Open intermediate and symbol table files for writing
-	intermediate fopen("Intermediate.txt", "w");
-	symboltable fopen("SymbolTable.txt", "w");
-	if (intermediate == NULL) {Error9();}	//unable to open file for writing
+	intermediate = fopen("Intermediate.txt", "w");
+	symboltable = fopen("SymbolTable.txt", "w");
+	if (intermediate == NULL) {Error8();}	//unable to open file for writing
 	else printf ("\n'Intermediate.txt' file created...\n");
-	if (symboltable == NULL) {Error9();}	//unable to open file for writing
+	if (symboltable == NULL) {Error8();}	//unable to open file for writing
 	else printf ("'SymbolTable.txt' file created...\n");
 
-	//status print
-	printf("\n	Beginning Pass 1...\n");
-
 	//initialize OpTable and delimiters
-	OPTAB();
-	delimiter[0] = " ";
-	delimiter[1] = "\t";
+	OpTable();
 
 	//initial print
 	fprintf(intermediate, "Intermediate File\n");
-	fprintf(intermediate, "--lists source line, location counter, mnemonics, operands, and errors--\n\n");
+	fprintf(intermediate, "--Contatins: source line, location counter, mnemonics, operands, and errors--\n\n");
 
-	//local variables
-	int i = 0;
+	//Toenize, Pass 1
 
-	while(fgets(line, 500, source))
-	{
-		location += 1;
-		strtok(line, delimiter);
-	}
-
+	strcpy(line, "\0");
 }
 
 void execute (char *prm1)
@@ -381,108 +388,107 @@ void assemble(char *prm1)
 	printf ("Parameter: %s \n", prm1);
 }
 
-//build/initialize OpTable
 void OpTable()
 {
 	strcpy(OPTAB[0].instruction, "ADD");
 	OPTAB[0].opcode = 0x8;
-	strcpy(OPTAB[0].directive, "");
+	strcpy(OPTAB[0].directive, "\0");
 
 	strcpy(OPTAB[1].instruction, "AND");
 	OPTAB[1].opcode = 0x58;
-	strcpy(OPTAB[1].directive, "");
+	strcpy(OPTAB[1].directive, "\0");
 
 	strcpy(OPTAB[2].instruction, "COMP");
 	OPTAB[2].opcode = 0x28;
-	strcpy(OPTAB[2].directive, "");
+	strcpy(OPTAB[2].directive, "\0");
 
 	strcpy(OPTAB[3].instruction, "DIV");
 	OPTAB[3].opcode = 0x24;
-	strcpy(OPTAB[3].directive, "");
+	strcpy(OPTAB[3].directive, "\0");
 
 	strcpy(OPTAB[4].instruction, "J");
 	OPTAB[4].opcode = 0x3C;
-	strcpy(OPTAB[4].directive, "");
+	strcpy(OPTAB[4].directive, "\0");
 
 	strcpy(OPTAB[5].instruction, "JEQ");
 	OPTAB[5].opcode = 0x30;
-	strcpy(OPTAB[5].directive, "");
+	strcpy(OPTAB[5].directive, "\0");
 
 	strcpy(OPTAB[6].instruction, "JGT");
 	OPTAB[6].opcode = 0x34;
-	strcpy(OPTAB[6].directive, "");
+	strcpy(OPTAB[6].directive, "\0");
 
 	strcpy(OPTAB[7].instruction, "JLT");
 	OPTAB[7].opcode = 0x38;
-	strcpy(OPTAB[7].directive, "");
+	strcpy(OPTAB[7].directive, "\0");
 
 	strcpy(OPTAB[8].instruction, "JSUB");
 	OPTAB[8].opcode = 0x48;
-	strcpy(OPTAB[8].directive, "");
+	strcpy(OPTAB[8].directive, "\0");
 
 	strcpy(OPTAB[9].instruction, "LDA");
 	OPTAB[9].opcode = 0x00;
-	strcpy(OPTAB[9].directive, "");
+	strcpy(OPTAB[9].directive, "\0");
 
 	strcpy(OPTAB[10].instruction, "LDCH");
 	OPTAB[10].opcode = 0x50;
-	strcpy(OPTAB[10].directive, "");
+	strcpy(OPTAB[10].directive, "\0");
 
 	strcpy(OPTAB[11].instruction, "LDL");
 	OPTAB[11].opcode = 0x08;
-	strcpy(OPTAB[11].directive, "");
+	strcpy(OPTAB[11].directive, "\0");
 
 	strcpy(OPTAB[12].instruction, "LDX");
 	OPTAB[12].opcode = 0x04;
-	strcpy(OPTAB[12].directive, "");
+	strcpy(OPTAB[12].directive, "\0");
 
 	strcpy(OPTAB[13].instruction, "MUL");
 	OPTAB[13].opcode = 0x20;
-	strcpy(OPTAB[13].directive, "");
+	strcpy(OPTAB[13].directive, "\0");
 
 	strcpy(OPTAB[14].instruction, "OR");
 	OPTAB[14].opcode = 0x44;
-	strcpy(OPTAB[14].directive, "");
+	strcpy(OPTAB[14].directive, "\0");
 
 	strcpy(OPTAB[15].instruction, "RD");
 	OPTAB[15].opcode = 0xD8;
-	strcpy(OPTAB[15].directive, "");
+	strcpy(OPTAB[15].directive, "\0");
 
 	strcpy(OPTAB[16].instruction, "RSUB");
 	OPTAB[16].opcode = 0x4C;
-	strcpy(OPTAB[16].directive, "");
+	strcpy(OPTAB[16].directive, "\0");
 
 	strcpy(OPTAB[17].instruction, "STA");
 	OPTAB[17].opcode = 0x0C;
-	strcpy(OPTAB[17].directive, "");
+	strcpy(OPTAB[17].directive, "\0");
 
 	strcpy(OPTAB[18].instruction, "STCH");
 	OPTAB[18].opcode = 0x54;
-	strcpy(OPTAB[18].directive, "");
+	strcpy(OPTAB[18].directive, "\0");
 
 	strcpy(OPTAB[19].instruction, "STL");
 	OPTAB[19].opcode = 0x14;
-	strcpy(OPTAB[19].directive, "");
+	strcpy(OPTAB[19].directive, "\0");
 
 	strcpy(OPTAB[20].instruction, "STX");
 	OPTAB[20].opcode = 0x10;
-	strcpy(OPTAB[20].directive, "");
+	strcpy(OPTAB[20].directive, "\0");
 
 	strcpy(OPTAB[21].instruction, "SUB");
 	OPTAB[21].opcode = 0x1C;
-	strcpy(OPTAB[21].directive, "");
+	strcpy(OPTAB[21].directive, "\0");
 
 	strcpy(OPTAB[22].instruction, "TD");
 	OPTAB[22].opcode = 0xE0;
-	strcpy(OPTAB[22].directive, "");
+	strcpy(OPTAB[22].directive, "\0");
 
 	strcpy(OPTAB[23].instruction, "TIX");
 	OPTAB[23].opcode = 0x2C;
-	strcpy(OPTAB[23].directive, "");
+	strcpy(OPTAB[23].directive, "\0");
 
 	strcpy(OPTAB[24].instruction, "WD");
 	OPTAB[24].opcode = 0xDC;
-	strcpy(OPTAB[24].directive, "");
+	strcpy(OPTAB[24].directive, "\0");
 
 	strcpy(OPTAB[25].instruction, "START");
 	strcpy(OPTAB[25].directive, "START");
@@ -514,4 +520,86 @@ void ErrorFlag()
 	strcpy(Error[6].output, " |Error: Too many symbols in source program| ");
 	strcpy(Error[7].output, " |Error: Program too long| ");
 	strcpy(Error[8].output, " |Error: Unable to open file for writing| ");
+}
+
+void Tokenize(char *line)
+{
+	//booleans for loops
+	bool cont;
+	bool blank;
+	bool end = false;
+	
+	//index for 'token[]'
+	int tok = 0;
+
+	T_clear();
+
+	//if line is a comment do not tokenize
+	if (line[0] == '.') return;
+
+	for (int i = 0; end == false || tok < 4; i++)
+	{
+		cont = true;
+		blank = true;
+		int begin = i;
+
+		while(cont)
+		{
+			switch(line[i])
+			{
+				case ' ':	//if space is hit
+					i++;
+					if (tok == 3) continue;
+					else cont = false;
+				case '\t':	//if tab is hit
+					i++;
+					if (tok == 3) continue;
+					else cont = false;
+				case '\r':
+				case '\v':
+				case '\0':	//if empty char is hit
+					end = true; 
+					cont = false;
+				case '\n':	//if newline is hit
+					end = true;	
+					cont = false; 
+				default:
+					blank = false;
+					i++;
+			}
+		}
+
+		if(!blank)
+		{
+			memcpy(token[tok].str, &line[begin], (i - begin));
+			token[tok].str[i - begin + 1] = '\0';
+			tcount++;
+			token[tok].count = tcount;
+			tok++;
+		}
+		else
+		{
+			strcpy(token[tok].str, " ");
+			tcount++;
+			token[tok].count = tcount;
+			tok++;
+		}
+
+		//break when end is flaged
+		if (end == true) break;
+	}
+}
+
+void T_clear()
+{
+	for (int i = 0; i < 4; i++)
+	{
+		strcpy(token[i].str, "\0");
+		token[i].count = 0;
+	}
+}
+
+void T_fprint()
+{
+
 }
