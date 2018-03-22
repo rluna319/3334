@@ -34,13 +34,10 @@ void OpTable();
 struct SymbolTable
 {
 	char label[6];		//label (max = 6 chars)(alphanumeric)
-	int address;		//label address
-	int count;			//tracks # of labels being inserted into the table
+	long address;		//label address
 };
-struct SymbolTable SYMTAB [500];	//SymbolTable array (max = 500 labels)
-
-//initializes address value to -1
-//void SymbolTable();
+struct SymbolTable SYMTAB[500];	//SymbolTable array (max = 500 labels)
+struct SymbolTable *SYM = 0;	//SYMTAB pointer initailized to nothing
 
 //						--End SymbolTable--
 
@@ -54,29 +51,29 @@ struct Token token[4];	//array Token (max of 4 tokens per line)
 
 //						--End Token--
 
-//						--Start ErrorFlag--
-struct ErrorFlag {char output[100];};	
-struct ErrorFlag Error[10]; //ErrorFlag array of strings (total of 10 possible errors in phase2)
+//						--Start ErrorFlags--
+struct ErrorFlags {char output[100];};	
+struct ErrorFlags Error[21]; //ErrorFlags array of strings (total of 21 possible errors in phase2)
 
-	void ErrorFlag();	//initializes Error definitions
+	void ErrorFlags();	//initializes Error definitions
 
-	void Error0(){printf("%s\n", Error[0].output);}
+	/*void Error0(){printf("%s\n", Error[0].output);}
 	void Error1(){printf("%s\n", Error[1].output);}
 	void Error2(){printf("%s\n", Error[2].output);}
 	void Error3(){printf("%s\n", Error[3].output);}
-	void Error4(){printf("%s\n", Error[4].output);}
+	void Error4(){printf("%s\n", Error[4].output);}					I probably don't need these... -_-
 	void Error5(){printf("%s\n", Error[5].output);}
 	void Error6(){printf("%s\n", Error[6].output);}
 	void Error7(){printf("%s\n", Error[7].output);}
 	void Error8(){printf("%s\n", Error[8].output);}
 	void Error9(){printf("%s\n", Error[9].output);}
-	//void Error10(){printf("%s\n", Error[10].output);}
+	//void Error10(){printf("%s\n", Error[10].output);}*/
 
-//						--End ErrorFlag--
+//						--End ErrorFlags--
 
 //-----------------------File Declarations--------------------//
 
-FILE *source, *intermediate, *symboltable;
+FILE *source, *intermediate, *symboltable, *Errors;
 
 
 //-----------------------Program Functions--------------------//  
@@ -93,18 +90,27 @@ void T_fprint();
 void Pass1();
 //get line if file being read
 void getLine(char *);
+//for easy oneliner conversion from string to hex
+long toHex(char);
+//insert label into SYMTAB
+void symInsert(char *, long, bool *);
+//Clears SYMTAB[]
+void S_clear();
+//search funtion for symbol table
+bool symSearch(char *);
 
 
 //-----------------------Global Variables---------------------//
 
-int location = 0; //location counter
-int begin = 0;	//program begin location
+int LC = 0; 		//LC counter
+int begin = 0;		//program begin LC
 int progLen = 0;	//legnth of program
-int comment = 0;	//program comment location
+int comment = 0;	//program comment LC
 char progName[20];	//name of program
 char line[500];		//stores line in file
 int tcount = 0;		//token counter
-
+int symI = 0;		//SYMTAB indexer/counter
+//int symC = 0;		//symbol counter
 
 
 //------------------------Main--------------------------------//  
@@ -336,18 +342,18 @@ void loadf(char *prm1)
 	//Open intermediate and symbol table files for writing
 	intermediate = fopen("Intermediate.txt", "w");
 	symboltable = fopen("SymbolTable.txt", "w");
-	if (intermediate == NULL) {Error8();}	//unable to open intermediate file for writing
+	if (intermediate == NULL) {printf("%s\n\n", Error[8].output);}	//unable to open intermediate file for writing 
 	else printf ("\n'Intermediate.txt' file created...\n");
-	if (symboltable == NULL) {Error9();}	//unable to open symboltable for writing
+	if (symboltable == NULL) {printf("%s\n\n", Error[9].output);}	//unable to open symboltable for writing 
 	else printf ("'SymbolTable.txt' file created...\n");
 
 	//initialize OpTable and line array
 	OpTable();
 	strcpy(line, "\0");
 
-	//initial print
+	//neg1 print
 	fprintf(intermediate, "Intermediate File\n");
-	fprintf(intermediate, "--Contatins: source line, location counter, mnemonics, operands, and errors--\n\n");
+	fprintf(intermediate, "--Contatins: source line, LC counter, mnemonics, operands, and errors--\n\n");
 }
 
 void execute (char *prm1)
@@ -508,7 +514,7 @@ void OpTable()
 	strcpy(OPTAB[30].directive, "RESW");
 }
 
-void ErrorFlag()
+void ErrorFlags()
 {
 	strcpy(Error[0].output, " |Error: Duplicate label found| ");
 	strcpy(Error[1].output, " |Error: Illegal label| ");
@@ -518,8 +524,24 @@ void ErrorFlag()
 	strcpy(Error[5].output, " |Error: Missing or illegal operand on END directive| ");
 	strcpy(Error[6].output, " |Error: Too many symbols in source program| ");
 	strcpy(Error[7].output, " |Error: Program too long| ");
-	strcpy(Error[8].output, " |Error: Unable to open Intermediate.txt for writing");
-	strcpy(Error[9].output, " |Error: Unable to open SymbolTable.txt for writing");
+	strcpy(Error[8].output, " |Error: Unable to open Intermediate.txt for writing| ");
+	strcpy(Error[9].output, " |Error: Unable to open SymbolTable.txt for writing| ");
+
+	//				start Pass 1 Errors
+	strcpy(Error[10].output, " |Error: Missing START label| ");
+	strcpy(Error[11].output, " |Error: Missing Starting address in operand| ");
+	strcpy(Error[12].output, " |Error: Duplicate label found| ");
+	strcpy(Error[13].output, " |Error: Incorrect START label| ");
+	strcpy(Error[14].output, " |Error: | ");
+	strcpy(Error[15].output, " |Error: | ");
+	strcpy(Error[16].output, " |Error: | ");
+	strcpy(Error[17].output, " |Error: | ");
+	strcpy(Error[18].output, " |Error: | ");
+	strcpy(Error[19].output, " |Error: | ");
+	strcpy(Error[20].output, " |Error: | ");
+
+
+	//				end Pass 1 Errors
 }
 
 void Tokenize(char *line)
@@ -565,9 +587,11 @@ void Tokenize(char *line)
 				case '\0':	//if empty char is hit
 					if (tok < 3) end = true;
 					cont = false;
+					break;
 				case '\n':	//if newline is hit
 					if (tok < 3) end = true;
 					cont = false;
+					break;
 				default:
 					blank = false;
 					i++;
@@ -597,32 +621,144 @@ void T_clear()
 	}
 }
 
-void T_fprint()
+void T_fprint()	//?? do i need this?? **************
 {
 
 }
 
+long toHex(char hstr)
+{
+	char *p;
+	return strtol(&hstr, &p, 16);
+}
+
+void S_clear()
+{
+	for (int i = 0; i < 500; i++)
+	{
+		memset(SYMTAB[i].label, '\0', 6);
+	}
+}
+
+bool symSearch(char *label)
+{
+	bool found = false;
+	for (int i = 0; i < 500; i++){ 
+		if (strcmp(label, SYMTAB[i].label)){
+			SYM = &SYMTAB[i];
+			found = true;
+			break;
+		}
+	}
+
+	if (found) return true;
+	else return false;
+}
+
+void symInsert(char *label, long addr, bool *symERR)
+{
+	bool found = false;		//is label already in symbol table?
+	bool operand = false;	//is label given in the operand field?
+	bool neg1 = false;		//is label address = -1 ? //?? do i need this?? ********
+	int i;
+
+	if (addr == -1) operand = true; //otherwise label is in label field
+
+	if (!operand)	//if label is in label field
+	{
+		//check if it is in the symbol table
+		found = symSearch(label);
+		if (found){	//SYM points to the symbol in SYMTAB[] if found
+			if (SYM->address == -1){	//if symbol is in symbol table but has no address
+				//neg1 = true;			***********
+				SYM->address = addr;	//set address for label
+				SYM = 0;	//reset pointer
+			}
+			else {	//error duplicate label ** Error 12
+				*symERR = true; //?? Do i even need to set an error bool here??	************
+				SYM = 0;	//reset pointer
+			}
+		}
+		else {	//SYM points to nothing, insert label into SYMTAB[] and increment symI
+			strcpy(SYMTAB[symI].label, label);
+			SYM->address = addr;
+			symI++;
+		}
+	}
+	else  // if label is in operand field
+	{
+		//if program is at this point then it has already been determined 
+		//that the label is not in the symbol table yet. So insert it with
+		//address set to -1 and increment symI
+		strcpy(SYMTAB[symI].label, label);
+		SYMTAB[symI].address = -1;
+		symI++; //move to next index in SYMTAB[]	
+	}	
+}
+
 void Pass1()
 {
-	bool begin = false;		//has start been called?
-	int length;		//length of line
+	bool begin = false;				//has start been called?
+	int length;						//length of line
+	bool tok1, tok2, tok3, tok4;	//does token exist?
+	char label[6];					//stores label to input as parameter 
+	bool symERR;					//was there an error? //?? do i need this?? ***************
+	int ErrorCount = 0;				//Error count
 
-	//initialize 'line[]'
-	for(int i = 0; i < 500; i++) line[i] = '\0';
+	//set location counter to 0
+	LC = 0;	
+
+	//open tmp file to push errors to
+	Errors = fopen("Error.tmp", "w");
+	if (Errors == NULL) printf("!!Unable to open Error.tmp for writing.. LINE: %d\n\n", __LINE__);
+	fprintf(Errors, "Error: ");
+
+	//clear SymbolTable and 'line[]'
+	S_clear();
+	memset(line, '\0', 500);
 
 	printf("Beginning Pass 1...");	//status print
 
 	while(!feof(source) && !begin)
 	{
-		while(fgets(line, 500, source))
+		fgets(line, 500, source);	//read in line
+		Tokenize(line);		//get tokens
+
+		//intitalize tok booleans
+		tok1 = token[0].hastoken;
+		tok2 = token[1].hastoken;
+		tok3 = token[2].hastoken;
+		tok4 = token[3].hastoken;
+
+		if (line[0] == '.')	//if comment only
 		{
-			length = strcspn(line, "\n") + 1;	//get length of line
+			if (token[3].str[0] != '.') fprintf(intermediate, ".%s\n\n", token[3].str);
+			else fprintf(intermediate, "%s\n\n", token[3].str);
+			continue;	//move on to next line in source file
 		}
-	}
+		else 	//if not a comment process line
+		{
+			begin = true;		//start error checking
 
-
-	while(fgets(line, 500, source))
-	{
-
+			if (!tok1){	//missing start label ** Error 10
+				fprintf(Errors, "10 ");
+				ErrorCount++; 
+			}
+			if (tok1 && !strcmp(token[0].str, "START")){ //incorrect start label ** Error 13
+				fprintf(Errors, "13 ");
+				ErrorCount++;
+			}
+			else if (tok1 && strcmp(token[0].str, "START"))
+			{
+				if(!tok3){ //missing starting address ** Error 11
+					fprintf(Errors, "11 ");
+					ErrorCount++;
+				} 
+				else LC = toHex(*token[2].str);	//set location counter to starting address
+			}	
+		}
+		
 	}
 }
+
+//**************************** UNFINISHED! :( ***************************//
