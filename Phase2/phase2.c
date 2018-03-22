@@ -93,7 +93,7 @@ void getLine(char *);
 //for easy oneliner conversion from string to hex
 long toHex(char);
 //insert label into SYMTAB
-void symInsert(char *, long, bool *);
+void symInsert(char *, long);
 //Clears SYMTAB[]
 void S_clear();
 //search funtion for symbol table
@@ -102,7 +102,7 @@ bool symSearch(char *);
 
 //-----------------------Global Variables---------------------//
 
-int LC = 0; 		//LC counter
+long LC = 0; 		//LC counter
 int begin = 0;		//program begin LC
 int progLen = 0;	//legnth of program
 int comment = 0;	//program comment LC
@@ -111,6 +111,8 @@ char line[500];		//stores line in file
 int tcount = 0;		//token counter
 int symI = 0;		//SYMTAB indexer/counter
 //int symC = 0;		//symbol counter
+int ErrorCount = 0;	//Error count
+char Sname[20];		//stores source file name
 
 
 //------------------------Main--------------------------------//  
@@ -330,6 +332,7 @@ void split (char *str, char *cmd, char *prm1, char *prm2, int *n)
 void loadf(char *prm1)
 {
 	//Open source file for reading
+	strcpy(Sname, prm1);
 	source = fopen(prm1, "r");
 	if (source == NULL)		//file not located (stop loadf)
 	{
@@ -354,6 +357,7 @@ void loadf(char *prm1)
 	//neg1 print
 	fprintf(intermediate, "Intermediate File\n");
 	fprintf(intermediate, "--Contatins: source line, LC counter, mnemonics, operands, and errors--\n\n");
+	return;
 }
 
 void execute (char *prm1)
@@ -383,14 +387,25 @@ void help()
 	printf ("	~ dump <starting address (hexadecimal)> <ending address (hexadecimal)> - Dumps the memory in the specified range. \n");
 	printf ("	~ help - Lists available commands. \n");
 	printf ("	~ directory - (dir) Lists files within your directory. \n");
-	printf ("	~ exit - This will exit the simulator. Make sure to save your work! \n");  
+	printf ("	~ exit - This will exit the simulator. Make sure to save your work! \n"); 
+	printf ("   ~ assemble - assembles the source file loaded . \n"); 
 	printf ("----------------------------------------------------------------------------------------------------------\n");
 }
 
 void assemble(char *prm1)
 {
-	printf ("'assemble' command recognized! \n");
-	printf ("Parameter: %s \n", prm1);
+	if (prm1 == Sname)
+	{
+		if (source != NULL && intermediate != NULL && symboltable != NULL) Pass1();
+		else {
+			printf("Error:\n Source program not loaded and/or 'Intermediate.txt' and/or 'SymbolTable.txt not created...\n");
+			printf("-Remember you must load the source file prior to calling assemble-\n\n");
+		}
+	}
+	else {
+		printf("	Error!\n	File not found. Filenames are case sensitive!\n\n");
+		printf("	-Remember you must load the source file prior to calling assemble-\n\n");
+	}	
 }
 
 void OpTable()
@@ -528,10 +543,10 @@ void ErrorFlags()
 	strcpy(Error[9].output, " |Error: Unable to open SymbolTable.txt for writing| ");
 
 	//				start Pass 1 Errors
-	strcpy(Error[10].output, " |Error: Missing START label| ");
-	strcpy(Error[11].output, " |Error: Missing Starting address in operand| ");
-	strcpy(Error[12].output, " |Error: Duplicate label found| ");
-	strcpy(Error[13].output, " |Error: Incorrect START label| ");
+	strcpy(Error[10].output, " |Error: | ");
+	strcpy(Error[11].output, " |Error: | ");
+	strcpy(Error[12].output, " |Error: | ");
+	strcpy(Error[13].output, " |Error: | ");
 	strcpy(Error[14].output, " |Error: | ");
 	strcpy(Error[15].output, " |Error: | ");
 	strcpy(Error[16].output, " |Error: | ");
@@ -655,7 +670,7 @@ bool symSearch(char *label)
 	else return false;
 }
 
-void symInsert(char *label, long addr, bool *symERR)
+void symInsert(char *label, long addr)
 {
 	bool found = false;		//is label already in symbol table?
 	bool operand = false;	//is label given in the operand field?
@@ -674,8 +689,9 @@ void symInsert(char *label, long addr, bool *symERR)
 				SYM->address = addr;	//set address for label
 				SYM = 0;	//reset pointer
 			}
-			else {	//error duplicate label ** Error 12
-				*symERR = true; //?? Do i even need to set an error bool here??	************
+			else {	//error duplicate label ** Error 0
+				fprintf(Errors, "0 ");
+				ErrorCount++;
 				SYM = 0;	//reset pointer
 			}
 		}
@@ -699,18 +715,20 @@ void symInsert(char *label, long addr, bool *symERR)
 void Pass1()
 {
 	bool begin = false;				//has start been called?
+	bool end = false;				//has end of source file been
 	int length;						//length of line
 	bool tok1, tok2, tok3, tok4;	//does token exist?
-	char label[6];					//stores label to input as parameter 
+	char label[6];					//stores label to input as parameter
+	char ErrorLine[100];			//stores Error line in Errors to print to intermediate file
 	bool symERR;					//was there an error? //?? do i need this?? ***************
-	int ErrorCount = 0;				//Error count
 
 	//set location counter to 0
 	LC = 0;	
 
 	//open tmp file to push errors to
-	Errors = fopen("Error.tmp", "w");
-	if (Errors == NULL) printf("!!Unable to open Error.tmp for writing.. LINE: %d\n\n", __LINE__);
+	char ErrFile[20] = "Error.tmp";
+	Errors = fopen(ErrFile, "w");
+	if (Errors == NULL) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
 	fprintf(Errors, "Error: ");
 
 	//clear SymbolTable and 'line[]'
@@ -739,26 +757,62 @@ void Pass1()
 		else 	//if not a comment process line
 		{
 			begin = true;		//start error checking
-
-			if (!tok1){	//missing start label ** Error 10
-				fprintf(Errors, "10 ");
+			if (tok1) symInsert(token[0].str, LC);
+			if (!tok2){	//missing start directive ** Error 2
+				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
-			if (tok1 && !strcmp(token[0].str, "START")){ //incorrect start label ** Error 13
-				fprintf(Errors, "13 ");
+			if (tok2 && !strcmp(token[1].str, "START")){ //invalid operation ** Error 2
+				fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
-			else if (tok1 && strcmp(token[0].str, "START"))
+			else if (tok2 && strcmp(token[1].str, "START"))
 			{
-				if(!tok3){ //missing starting address ** Error 11
-					fprintf(Errors, "11 ");
+				if(!tok3){ //missing starting address ** Error 4
+					fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
 				else LC = toHex(*token[2].str);	//set location counter to starting address
-			}	
+			}
+			if (!tok1 && !tok3 && tok2)	//RSUB
+			{
+				//if this combination exists then the directive should be RSUB
+				if (!strcmp(token[1].str, "RSUB")){ //invalid operation ** Error 1
+					fprintf(Errors, "1 ");
+					ErrorCount++;
+				}
+			}
 		}
-		
+
+		//print to intermediate file
+		fprintf(source, "Source line: %s\n", line);
+		fprintf(source, "Location counter: %ld\n", LC);
+		fprintf(source, "Label: %s\n", token[0].str);
+		fprintf(source, "Operation: %s\n", token[1].str);
+		fprintf(source, "Operand: %s\n", token[2].str);
+		fgets(ErrorLine, 100, Errors);
+		fprintf(source, "%s\n\n", ErrorLine);
+		fprintf(Errors, "\n");
 	}
+	while (!feof(source) && !end)
+	{
+
+	}
+
+	//print to symbol table
+	fprintf(symboltable, "Label			Address\n\n");
+	for (int i = 0; i < (symI + 1); i++){
+		fprintf(symboltable, "%s			%ld\n", SYMTAB[i].label, SYMTAB[i].address);
+	}
+
+	//close files and delete 'Error.tmp'
+	fclose(source);
+	fclose(intermediate);
+	fclose(symboltable);
+	remove(ErrFile);
+
+	//double check that the temporary Error file was removed succesfully
+	if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 }
 
 //**************************** UNFINISHED! :( ***************************//
