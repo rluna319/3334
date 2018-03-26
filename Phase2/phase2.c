@@ -588,20 +588,25 @@ void Tokenize(char *line)
 		blank = true;
 		int begin = i;
 
-		while(cont)
+		while(cont && line[i] != '\n')
 		{
 			switch(line[i])
 			{
 				case ' ':	//if space is hit
 					if (tok != 3){
 						cont = false;
-						break;
 					}
+					else i++;
+					break;
 				case '\t':	//if tab is hit
 					if (tok != 3){
 						cont = false;
-						break;
 					}
+					else {
+						begin++;
+						i++;
+					}
+					break;
 				case '\r':
 				case '\v':
 				case '\0':	//if empty char is hit
@@ -625,7 +630,7 @@ void Tokenize(char *line)
 			token[tok].str[i - begin + 1] = '\0';
 			tcount++;
 			token[tok].hastoken = true;
-			if (end <= 6) i += (begin + 7) - i;
+			if (end <= 6 && tok != 2) i += (begin + 7) - i;
 		}
 
 		tok++;
@@ -824,6 +829,10 @@ void Pass1()
 
 	//double check that the temporary Error file was removed succesfully
 	if (!Errors) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
+}
+
+void getLine(char *line)
+{
 }
 
 //**************************** UNFINISHED! :( ***************************//
