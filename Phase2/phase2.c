@@ -73,7 +73,7 @@ struct ErrorFlags Error[21]; //ErrorFlags array of strings (total of 21 possible
 
 //-----------------------File Declarations--------------------//
 
-FILE *source, *intermediate, *symboltable, *Errors;
+FILE *source, *intermediate, *symboltable, *Errors, *randi;
 
 
 //-----------------------Program Functions--------------------//  
@@ -333,10 +333,8 @@ void split (char *str, char *cmd, char *prm1, char *prm2, int *n)
 
 void loadf(char *prm1)
 {
-	//Open source file for reading
-	strcpy(Sname, prm1);
-	source = fopen(prm1, "r");
-	if (source == NULL)		//file not located (stop loadf)
+	randi = fopen(prm1, "r");
+	if (randi == NULL)		//file not located (stop loadf)
 	{
 		printf ("%s does not exist.\nPlease try again.", prm1);
 		printf ("Remember that filenames are case-sensitive...\n\n");
@@ -344,21 +342,7 @@ void loadf(char *prm1)
 	}
 	else printf ("%s successfully loaded\n", prm1);	//file located
 
-	//Open intermediate and symbol table files for writing
-	intermediate = fopen(I_fname, "w");
-	symboltable = fopen(ST_fname, "w");
-	if (intermediate == NULL) {printf("%s\n\n", Error[8].output);}	//unable to open intermediate file for writing 
-	else printf ("\n'Intermediate.txt' file created...\n");
-	if (symboltable == NULL) {printf("%s\n\n", Error[9].output);}	//unable to open symboltable for writing 
-	else printf ("'SymbolTable.txt' file created...\n");
-
-	//initialize OpTable and line array
-	OpTable();
-	strcpy(line, "\0");
-
-	fprintf(intermediate, "Intermediate File\n");
-	fprintf(intermediate, "--Contatins: source line, LC counter, mnemonics, operands, and errors--\n\n");
-
+	fclose(randi);
 
 	return;
 }
@@ -399,14 +383,31 @@ void assemble(char *prm1)
 {
 	intermediate = fopen(I_fname, "w");
 	symboltable = fopen(ST_fname, "w");
+	source = fopen(prm1, "r");
 
-	if (intermediate && symboltable)
+	if (source)
 	{
+		if (intermediate && symboltable){
+			//status print
+			printf("%s created in current directory...\n", I_fname);
+			printf("%s created in current directory...\n\n", ST_fname);
+		}
+		else {
+			printf("Internal Error: Cannot open intermediate and/or symbol table for writing...\n\n");
+			return;
+		}
+
+		//initialize OpTable and line array
+		OpTable();
+		strcpy(line, "\0");
+
+		//Begin Pass 1
 		Pass1();
 	}
 	else {
 		printf("	Error!\n	File not found. Filenames are case sensitive!\n\n");
 		printf("	-Remember you must load the source file prior to calling assemble-\n\n");
+		return;
 	}	
 }
 
@@ -558,20 +559,20 @@ void ErrorFlags()
 	strcpy(Error[20].output, " |Error: | ");
 
 
-	//				end Pass 1 Errors
+	//				stop Pass 1 Errors
 }
 
 void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
 	bool blank;		//blank token?
-	bool end;		//early end of line?
+	bool stop;		//early stop of line?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
 	cont = blank = true;
-	end = false;
+	stop = false;
 
 	//if line is a comment do not tokenize
 	if (line[0] == '.') 
@@ -592,21 +593,23 @@ void Tokenize(char *line)
 			switch(line[i])
 			{
 				case ' ':	//if space is hit
-					i++;
-					if (tok == 3) continue;
-					else cont = false;
+					if (tok != 3){
+						cont = false;
+						break;
+					}
 				case '\t':	//if tab is hit
-					i++;
-					if (tok == 3) continue;
-					else cont = false;
+					if (tok != 3){
+						cont = false;
+						break;
+					}
 				case '\r':
 				case '\v':
 				case '\0':	//if empty char is hit
-					if (tok < 3) end = true;
+					if (tok < 3) stop = true;
 					cont = false;
 					break;
 				case '\n':	//if newline is hit
-					if (tok < 3) end = true;
+					if (tok < 3) stop = true;
 					cont = false;
 					break;
 				default:
@@ -617,15 +620,17 @@ void Tokenize(char *line)
 
 		if(!blank)
 		{
-			memcpy(token[tok].str, &line[begin], (i - 1) - begin);
+			int end = i - begin;
+			memcpy(token[tok].str, &line[begin], end);
 			token[tok].str[i - begin + 1] = '\0';
 			tcount++;
 			token[tok].hastoken = true;
+			if (end <= 6) i += (begin + 7) - i;
 		}
 
 		tok++;
 
-		if (end) break;
+		if (stop) break;
 	}
 }
 
@@ -717,7 +722,7 @@ void symInsert(char *label, long addr)
 void Pass1()
 {
 	bool begin = false;				//has start been called?
-	bool end = false;				//has end of source file been
+	bool stop = false;				//has stop of source file been
 	int length;						//length of line
 	bool tok1, tok2, tok3, tok4;	//does token exist?
 	char label[6];					//stores label to input as parameter
@@ -730,18 +735,19 @@ void Pass1()
 	//open tmp file to push errors to
 	char ErrFile[20] = "Error.tmp";
 	Errors = fopen(ErrFile, "w");
-	if (Errors == NULL) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+	if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
 	fprintf(Errors, "Error: ");
 
 	//clear SymbolTable and 'line[]'
 	S_clear();
 	memset(line, '\0', 500);
 
-	printf("Beginning Pass 1...");	//status print
+	printf("Beginning Pass 1...\n");	//status print
 
 	while(!feof(source) && !begin)
 	{
 		fgets(line, 500, source);	//read in line
+		printf("Line: %s\n\n",line);
 		Tokenize(line);		//get tokens
 
 		//intitalize tok booleans
@@ -786,20 +792,23 @@ void Pass1()
 			}
 		}
 
+		//test
+		printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
+
 		//print to intermediate file
-		fprintf(source, "Source line: %s\n", line);
-		fprintf(source, "Location counter: %ld\n", LC);
-		fprintf(source, "Label: %s\n", token[0].str);
-		fprintf(source, "Operation: %s\n", token[1].str);
-		fprintf(source, "Operand: %s\n", token[2].str);
+		fprintf(intermediate, "Source line: %s\n", line);
+		fprintf(intermediate, "Location counter: %ld\n", LC);
+		fprintf(intermediate, "Label: %s\n", token[0].str);
+		fprintf(intermediate, "Operation: %s\n", token[1].str);
+		fprintf(intermediate, "Operand: %s\n", token[2].str);
 		fgets(ErrorLine, 100, Errors);
-		fprintf(source, "%s\n\n", ErrorLine);
+		fprintf(intermediate, "%s\n\n", ErrorLine);
 		fprintf(Errors, "\n");
 	}
-	while (!feof(source) && !end)
-	{
+	//while (!feof(source) && !stop)
+	//{
 
-	}
+	//}
 
 	//print to symbol table
 	fprintf(symboltable, "Label			Address\n\n");
@@ -814,7 +823,7 @@ void Pass1()
 	remove(ErrFile);
 
 	//double check that the temporary Error file was removed succesfully
-	if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
+	if (!Errors) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 }
 
 //**************************** UNFINISHED! :( ***************************//
