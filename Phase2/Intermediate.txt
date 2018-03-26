@@ -1,3 +1,0 @@
-Intermediate File
---Contatins: source line, LC counter, mnemonics, operands, and errors--
-

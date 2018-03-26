@@ -113,6 +113,8 @@ int symI = 0;		//SYMTAB indexer/counter
 //int symC = 0;		//symbol counter
 int ErrorCount = 0;	//Error count
 char Sname[20];		//stores source file name
+char I_fname[20] = "Intermediate.txt";	//Intermediate filename
+char ST_fname[20] = "SymbolTable.txt";	//SymbolTable filename
 
 
 //------------------------Main--------------------------------//  
@@ -343,8 +345,8 @@ void loadf(char *prm1)
 	else printf ("%s successfully loaded\n", prm1);	//file located
 
 	//Open intermediate and symbol table files for writing
-	intermediate = fopen("Intermediate.txt", "w");
-	symboltable = fopen("SymbolTable.txt", "w");
+	intermediate = fopen(I_fname, "w");
+	symboltable = fopen(ST_fname, "w");
 	if (intermediate == NULL) {printf("%s\n\n", Error[8].output);}	//unable to open intermediate file for writing 
 	else printf ("\n'Intermediate.txt' file created...\n");
 	if (symboltable == NULL) {printf("%s\n\n", Error[9].output);}	//unable to open symboltable for writing 
@@ -354,9 +356,10 @@ void loadf(char *prm1)
 	OpTable();
 	strcpy(line, "\0");
 
-	//neg1 print
 	fprintf(intermediate, "Intermediate File\n");
 	fprintf(intermediate, "--Contatins: source line, LC counter, mnemonics, operands, and errors--\n\n");
+
+
 	return;
 }
 
@@ -388,19 +391,18 @@ void help()
 	printf ("	~ help - Lists available commands. \n");
 	printf ("	~ directory - (dir) Lists files within your directory. \n");
 	printf ("	~ exit - This will exit the simulator. Make sure to save your work! \n"); 
-	printf ("   ~ assemble - assembles the source file loaded . \n"); 
+	printf ("   	~ assemble - assembles the source file loaded. \n"); 
 	printf ("----------------------------------------------------------------------------------------------------------\n");
 }
 
 void assemble(char *prm1)
 {
-	if (prm1 == Sname)
+	intermediate = fopen(I_fname, "w");
+	symboltable = fopen(ST_fname, "w");
+
+	if (intermediate && symboltable)
 	{
-		if (source != NULL && intermediate != NULL && symboltable != NULL) Pass1();
-		else {
-			printf("Error:\n Source program not loaded and/or 'Intermediate.txt' and/or 'SymbolTable.txt not created...\n");
-			printf("-Remember you must load the source file prior to calling assemble-\n\n");
-		}
+		Pass1();
 	}
 	else {
 		printf("	Error!\n	File not found. Filenames are case sensitive!\n\n");
