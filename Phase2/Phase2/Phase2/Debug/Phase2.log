@@ -175,19 +175,24 @@ c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(558): warning C4996
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
 c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(559): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(580): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(582): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(646): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(571): warning C4101: 'rsub': unreferenced local variable
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(664): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(711): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(734): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(721): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(739): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
   c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(690): warning C4101: 'i': unreferenced local variable
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(742): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(731): warning C4101: 'length': unreferenced local variable
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(735): warning C4101: 'symERR': unreferenced local variable
-c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(733): warning C4101: 'label': unreferenced local variable
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(740): warning C4996: 'strcat': This function or variable may be unsafe. Consider using strcat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(90): note: see declaration of 'strcat'
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(741): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(753): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(714): warning C4101: 'i': unreferenced local variable
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(763): warning C4101: 'length': unreferenced local variable
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(766): warning C4101: 'ErrorLine': unreferenced local variable
+c:\users\andrew\documents\3334\phase2\phase2\phase2\phase2.c(765): warning C4101: 'label': unreferenced local variable
   Phase2.vcxproj -> C:\Users\Andrew\Documents\3334\Phase2\Phase2\Debug\Phase2.exe
   Phase2.vcxproj -> C:\Users\Andrew\Documents\3334\Phase2\Phase2\Debug\Phase2.pdb (Full PDB)

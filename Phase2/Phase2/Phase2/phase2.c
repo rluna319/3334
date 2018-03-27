@@ -567,6 +567,8 @@ void Tokenize(char *line)
 	bool cont;		//continue loop?
 	bool blank;		//blank token?
 	bool stop;		//early stop of line?
+	bool tab;		//was a tab used before token 4
+	bool rsub;		//is rsub used?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
@@ -586,7 +588,9 @@ void Tokenize(char *line)
 	{
 		cont = true;
 		blank = true;
+		tab = false;
 		int begin = i;
+		memset(token[tok].str, '\0', 500);
 
 		while(cont && line[i] != '\n')
 		{
@@ -601,6 +605,7 @@ void Tokenize(char *line)
 				case '\t':	//if tab is hit
 					if (tok != 3){
 						cont = false;
+						tab = true;
 					}
 					else {
 						begin++;
@@ -627,10 +632,23 @@ void Tokenize(char *line)
 		{
 			int end = i - begin;
 			memcpy(token[tok].str, &line[begin], end);
-			token[tok].str[i - begin + 1] = '\0';
+			token[tok].str[end + 1] = '\0';
 			tcount++;
 			token[tok].hastoken = true;
-			if (end <= 6 && tok != 2) i += (begin + 7) - i;
+			//if RSUB skip operand token
+			if (tok == 1 && strcmp(token[1].str, "RSUB") == 0) {
+				tok++;
+			}
+			//get to next char
+			if (end <= 6 && tok != 2 && !tab) {
+				for (int j = i; j < 100; j++){
+					if (line[j] == ' ') j++;
+					else {
+						i = j - 1;  
+						break;
+					}
+				}					
+			}
 		}
 
 		tok++;
@@ -663,8 +681,7 @@ void S_clear()
 {
 	for (int i = 0; i < 500; i++)
 	{
-		memset(SYMTAB[i].label, '\0', 6);
-		SYMTAB[i].address = -2;
+		memset(SYMTAB[i].label, ' ', 6);
 	}
 }
 
@@ -692,7 +709,8 @@ void symInsert(char *label, long addr)
 {
 	bool found = false;		//is label already in symbol table?
 	bool operand = false;	//is label given in the operand field?
-	bool neg1 = false;		//is label address = -1 ? //?? do i need this?? ********
+	char ltmp[7];			//tmp file to mod label and strcat if needed
+	char tab[3] = "\t";	//holds tab char to format short labels
 	int i;
 
 	if (addr == -1) operand = true; //otherwise label is in label field
@@ -703,7 +721,6 @@ void symInsert(char *label, long addr)
 		found = symSearch(label);
 		if (found){	//SYM points to the symbol in SYMTAB[] if found
 			if (SYM->address == -1){	//if symbol is in symbol table but has no address
-				//neg1 = true;			***********
 				SYM->address = addr;	//set address for label
 				SYM = 0;	//reset pointer
 			}
@@ -715,6 +732,15 @@ void symInsert(char *label, long addr)
 		}
 		else {	//SYM points to nothing, insert label into SYMTAB[] and increment symI
 			strcpy(SYMTAB[symI].label, label);
+
+			//if the label is shorter than 4 chars then format it for SymbolTable.txt
+			for (int i = 0; i < 5; i++){
+				if (SYMTAB[symI].label[i] == ' ') {
+					strcpy(ltmp, label);
+					strcat(ltmp, tab);
+					strcpy(SYMTAB[symI].label, ltmp);
+				}
+			}
 			SYMTAB[symI].address = addr;
 			symI++;
 		}
@@ -738,7 +764,6 @@ void Pass1()
 	bool tok1, tok2, tok3, tok4;	//does token exist?
 	char label[6];					//stores label to input as parameter
 	char ErrorLine[100];			//stores Error line in Errors to print to intermediate file
-	bool symERR;					//was there an error? //?? do i need this?? ***************
 	char ErrFile[20] = "Error.tmp";
 	//set location counter to 0
 	LC = 0;	
@@ -752,9 +777,9 @@ void Pass1()
 	while(!feof(source) && !begin)
 	{	
 		//open tmp file to push errors to
-		Errors = fopen(ErrFile, "w");
-		if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		fprintf(Errors, "Error: ");
+		//Errors = fopen(ErrFile, "w");
+		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+		//fprintf(Errors, "Error: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -781,17 +806,17 @@ void Pass1()
 
 			if (tok1) symInsert(token[0].str, LC);
 			if (!tok2){	//missing start directive ** Error 2
-				fprintf(Errors, "2 ");
+				//fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
 			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
-				fprintf(Errors, "2 ");
+				//fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
 			else if (tok2 && strcmp(token[1].str, "START") == 0)
 			{
 				if(!tok3){ //missing starting address ** Error 4
-					fprintf(Errors, "4 ");
+					//fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
 				else LC = toHex(*token[2].str);	//set location counter to starting address
@@ -800,7 +825,7 @@ void Pass1()
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					fprintf(Errors, "1 ");
+					//fprintf(Errors, "1 ");
 					ErrorCount++;
 				}
 			}
@@ -810,25 +835,26 @@ void Pass1()
 		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
 
 		//print to intermediate file
-		fprintf(intermediate, "Source line: %s\n", line);
-		fprintf(intermediate, "Location counter: %ld\n", LC);
+		fprintf(intermediate, "\nSource line: %s\n", line);
+		fprintf(intermediate, "Location counter: %ld (NOT READY)\n", LC);
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fclose(Errors);
-		Errors = fopen(ErrFile, "r");
-		fgets(ErrorLine, 100, Errors);
-		fprintf(intermediate, "%s\n\n", ErrorLine);
-		fprintf(Errors, "\n");
-		fclose(Errors);
+		fprintf(intermediate, "Errors: (NOT READY)\n");
+		//fclose(Errors);
+		//Errors = fopen(ErrFile, "r");
+		//fgets(ErrorLine, 100, Errors);
+		//fprintf(intermediate, "%s\n\n", ErrorLine);
+		//fprintf(Errors, "\n");
+		//fclose(Errors);
 	}
 
 	while (!feof(source) && !stop)
 	{
 		//open tmp file to push errors to
-		Errors = fopen(ErrFile, "w");
-		if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		fprintf(Errors, "Error: ");
+		//Errors = fopen(ErrFile, "w");
+		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+		//fprintf(Errors, "Error: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -853,17 +879,17 @@ void Pass1()
 		{
 			if (tok1) symInsert(token[0].str, LC);
 			if (!tok2){	//missing start directive ** Error 2
-				fprintf(Errors, "2 ");
+				//fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
 			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
-				fprintf(Errors, "2 ");
+				//fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
 			else if (tok2 && strcmp(token[1].str, "START") == 0)
 			{
 				if(!tok3){ //missing starting address ** Error 4
-					fprintf(Errors, "4 ");
+					//fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
 				else LC = toHex(*token[2].str);	//set location counter to starting address
@@ -872,7 +898,7 @@ void Pass1()
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					fprintf(Errors, "1 ");
+					//fprintf(Errors, "1 ");
 					ErrorCount++;
 				}
 			}
@@ -882,17 +908,18 @@ void Pass1()
 		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
 
 		//print to intermediate file
-		fprintf(intermediate, "Source line: %s\n", line);
-		fprintf(intermediate, "Location counter: %ld\n", LC);
+		fprintf(intermediate, "\nSource line: %s\n", line);
+		fprintf(intermediate, "Location counter: %ld (NOT READY)\n", LC);
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fclose(Errors);
-		Errors = fopen(ErrFile, "r");
-		fgets(ErrorLine, 100, Errors);
-		fprintf(intermediate, "%s\n\n", ErrorLine);
-		fprintf(Errors, "\n");
-		fclose(Errors);
+		fprintf(intermediate, "Errors: (NOT READY)\n");
+		//fclose(Errors);
+		//Errors = fopen(ErrFile, "r");
+		//fgets(ErrorLine, 100, Errors);
+		//fprintf(intermediate, "%s\n\n", ErrorLine);
+		//fprintf(Errors, "\n");
+		//fclose(Errors);
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
@@ -907,10 +934,11 @@ void Pass1()
 	fclose(source);
 	fclose(intermediate);
 	fclose(symboltable);
-	remove(ErrFile);
+	//fclose(Errors);
+	//if (remove(ErrFile) == 1) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 
 	//double check that the temporary Error file was removed succesfully
-	if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
+	//if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 }
 
 void getLine(char *line)
