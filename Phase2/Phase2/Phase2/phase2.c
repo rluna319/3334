@@ -664,14 +664,20 @@ void S_clear()
 	for (int i = 0; i < 500; i++)
 	{
 		memset(SYMTAB[i].label, '\0', 6);
+		SYMTAB[i].address = -2;
 	}
 }
 
 bool symSearch(char *label)
 {
 	bool found = false;
+
+	//if SYMTAB is empty
+	if (SYMTAB[0].label[0] == '\0' && SYMTAB[0].address == -2) return false;
+
+	//loop through and check if label exists
 	for (int i = 0; i < 500; i++){ 
-		if (strcmp(label, SYMTAB[i].label)){
+		if (strcmp(label, SYMTAB[i].label) == 0){
 			SYM = &SYMTAB[i];
 			found = true;
 			break;
@@ -709,7 +715,7 @@ void symInsert(char *label, long addr)
 		}
 		else {	//SYM points to nothing, insert label into SYMTAB[] and increment symI
 			strcpy(SYMTAB[symI].label, label);
-			SYM->address = addr;
+			SYMTAB[symI].address = addr;
 			symI++;
 		}
 	}
@@ -733,26 +739,28 @@ void Pass1()
 	char label[6];					//stores label to input as parameter
 	char ErrorLine[100];			//stores Error line in Errors to print to intermediate file
 	bool symERR;					//was there an error? //?? do i need this?? ***************
-
+	char ErrFile[20] = "Error.tmp";
 	//set location counter to 0
 	LC = 0;	
-
-	//open tmp file to push errors to
-	char ErrFile[20] = "Error.tmp";
-	Errors = fopen(ErrFile, "w");
-	if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-	fprintf(Errors, "Error: ");
 
 	//clear SymbolTable and 'line[]'
 	S_clear();
 	memset(line, '\0', 500);
 
-	printf("Beginning Pass 1...\n");	//status print
+	printf("Beginning Pass 1...\n\n");	//status print
 
 	while(!feof(source) && !begin)
-	{
-		fgets(line, 500, source);	//read in line
-		printf("Line: %s\n\n",line);
+	{	
+		//open tmp file to push errors to
+		Errors = fopen(ErrFile, "w");
+		if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+		fprintf(Errors, "Error: ");
+
+		fgets(line, 500, source);	//read in source line
+
+		//Test print
+		//printf("Line: %s\n\n",line);
+
 		Tokenize(line);		//get tokens
 
 		//intitalize tok booleans
@@ -770,16 +778,17 @@ void Pass1()
 		else 	//if not a comment process line
 		{
 			begin = true;		//start error checking
+
 			if (tok1) symInsert(token[0].str, LC);
 			if (!tok2){	//missing start directive ** Error 2
 				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
-			if (tok2 && !strcmp(token[1].str, "START")){ //invalid operation ** Error 2
+			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
 				fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
-			else if (tok2 && strcmp(token[1].str, "START"))
+			else if (tok2 && strcmp(token[1].str, "START") == 0)
 			{
 				if(!tok3){ //missing starting address ** Error 4
 					fprintf(Errors, "4 ");
@@ -790,15 +799,15 @@ void Pass1()
 			if (!tok1 && !tok3 && tok2)	//RSUB
 			{
 				//if this combination exists then the directive should be RSUB
-				if (!strcmp(token[1].str, "RSUB")){ //invalid operation ** Error 1
+				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
 					fprintf(Errors, "1 ");
 					ErrorCount++;
 				}
 			}
 		}
 
-		//test
-		printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
+		//Test print
+		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
 
 		//print to intermediate file
 		fprintf(intermediate, "Source line: %s\n", line);
@@ -806,14 +815,87 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
+		fclose(Errors);
+		Errors = fopen(ErrFile, "r");
 		fgets(ErrorLine, 100, Errors);
 		fprintf(intermediate, "%s\n\n", ErrorLine);
 		fprintf(Errors, "\n");
+		fclose(Errors);
 	}
-	//while (!feof(source) && !stop)
-	//{
 
-	//}
+	while (!feof(source) && !stop)
+	{
+		//open tmp file to push errors to
+		Errors = fopen(ErrFile, "w");
+		if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+		fprintf(Errors, "Error: ");
+
+		fgets(line, 500, source);	//read in source line
+
+		//Test print
+		//printf("Line: %s\n\n",line);
+
+		Tokenize(line);		//get tokens
+
+		//intitalize tok booleans
+		tok1 = token[0].hastoken;
+		tok2 = token[1].hastoken;
+		tok3 = token[2].hastoken;
+		tok4 = token[3].hastoken;
+
+		if (line[0] == '.')	//if comment only
+		{
+			if (token[3].str[0] != '.') fprintf(intermediate, ".%s\n\n", token[3].str);
+			else fprintf(intermediate, "%s\n\n", token[3].str);
+			continue;	//move on to next line in source file
+		}
+		else 	//if not a comment process line
+		{
+			if (tok1) symInsert(token[0].str, LC);
+			if (!tok2){	//missing start directive ** Error 2
+				fprintf(Errors, "2 ");
+				ErrorCount++; 
+			}
+			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
+				fprintf(Errors, "2 ");
+				ErrorCount++;
+			}
+			else if (tok2 && strcmp(token[1].str, "START") == 0)
+			{
+				if(!tok3){ //missing starting address ** Error 4
+					fprintf(Errors, "4 ");
+					ErrorCount++;
+				} 
+				else LC = toHex(*token[2].str);	//set location counter to starting address
+			}
+			if (!tok1 && !tok3 && tok2)	//RSUB
+			{
+				//if this combination exists then the directive should be RSUB
+				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
+					fprintf(Errors, "1 ");
+					ErrorCount++;
+				}
+			}
+		}
+
+		//Test print
+		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
+
+		//print to intermediate file
+		fprintf(intermediate, "Source line: %s\n", line);
+		fprintf(intermediate, "Location counter: %ld\n", LC);
+		fprintf(intermediate, "Label: %s\n", token[0].str);
+		fprintf(intermediate, "Operation: %s\n", token[1].str);
+		fprintf(intermediate, "Operand: %s\n", token[2].str);
+		fclose(Errors);
+		Errors = fopen(ErrFile, "r");
+		fgets(ErrorLine, 100, Errors);
+		fprintf(intermediate, "%s\n\n", ErrorLine);
+		fprintf(Errors, "\n");
+		fclose(Errors);
+
+		if (strcmp(token[1].str, "END") == 0) break;
+	}
 
 	//print to symbol table
 	fprintf(symboltable, "Label			Address\n\n");
@@ -828,7 +910,7 @@ void Pass1()
 	remove(ErrFile);
 
 	//double check that the temporary Error file was removed succesfully
-	if (!Errors) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
+	if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 }
 
 void getLine(char *line)
