@@ -1,25 +1,24 @@
-
 Source line: COPY    START   1000		COPY FILE FROM INPUT TO OUTPUT
 
 Location counter: 0 (NOT READY)
 Label: COPY
 Operation: START
-Operand: 000
+Operand: 1000
 Errors: (NOT READY)
 
 Source line: FIRST   STL     RETADR		SAVE RETURN ADDRESS
 
 Location counter: 0 (NOT READY)
 Label: FIRST
-Operation: TL
-Operand: ETADR
+Operation: STL
+Operand: RETADR
 Errors: (NOT READY)
 
 Source line: CLOOP   JSUB    RDREC		READ INPUT RECORD
 
 Location counter: 0 (NOT READY)
 Label: CLOOP
-Operation: SUB
+Operation: JSUB
 Operand: RDREC
 Errors: (NOT READY)
 
@@ -44,7 +43,7 @@ Source line: 	JEQ     ENDFIL		EXIT IF EOF FOUND
 Location counter: 0 (NOT READY)
 Label: 
 Operation: JEQ
-Operand: NDFIL
+Operand: ENDFIL
 Errors: (NOT READY)
 
 Source line: 	JSUB	WRREC		WRITE OUTPUT RECORD
@@ -60,7 +59,7 @@ Source line: 	J       CLOOP		LOOP
 Location counter: 0 (NOT READY)
 Label: 
 Operation: J
-Operand: LOOP
+Operand: CLOOP
 Errors: (NOT READY)
 
 Source line: ENDFIL  LDA     EOF		INSERT END OF FILE MARKER
@@ -68,7 +67,7 @@ Source line: ENDFIL  LDA     EOF		INSERT END OF FILE MARKER
 Location counter: 0 (NOT READY)
 Label: ENDFIL
 Operation: LDA
-Operand: OF
+Operand: EOF
 Errors: (NOT READY)
 
 Source line: 	STA     BUFFER
@@ -76,7 +75,7 @@ Source line: 	STA     BUFFER
 Location counter: 0 (NOT READY)
 Label: 
 Operation: STA
-Operand: UFFER
+Operand: BUFFER
 Errors: (NOT READY)
 
 Source line: 	LDA     THREE		SET LENGTH = 3
@@ -84,7 +83,7 @@ Source line: 	LDA     THREE		SET LENGTH = 3
 Location counter: 0 (NOT READY)
 Label: 
 Operation: LDA
-Operand: HREE
+Operand: THREE
 Errors: (NOT READY)
 
 Source line: 	STA     LENGTH
@@ -92,7 +91,7 @@ Source line: 	STA     LENGTH
 Location counter: 0 (NOT READY)
 Label: 
 Operation: STA
-Operand: ENGTH
+Operand: LENGTH
 Errors: (NOT READY)
 
 Source line: 	JSUB    WRREC		WRITE EOF
@@ -108,7 +107,7 @@ Source line: 	LDL     RETADR		GET RETURN ADDRESS
 Location counter: 0 (NOT READY)
 Label: 
 Operation: LDL
-Operand: ETADR
+Operand: RETADR
 Errors: (NOT READY)
 
 Source line: 	RSUB             	RETURN TO CALLER
@@ -116,14 +115,14 @@ Source line: 	RSUB             	RETURN TO CALLER
 Location counter: 0 (NOT READY)
 Label: 
 Operation: RSUB
-Operand: 
+Operand: RETURN
 Errors: (NOT READY)
 
 Source line: EOF     BYTE    C'EOF'
 
 Location counter: 0 (NOT READY)
 Label: EOF
-Operation: YTE
+Operation: BYTE
 Operand: C'EOF'
 Errors: (NOT READY)
 
@@ -131,7 +130,7 @@ Source line: THREE   WORD    3
 
 Location counter: 0 (NOT READY)
 Label: THREE
-Operation: ORD
+Operation: WORD
 Operand: 3
 Errors: (NOT READY)
 
@@ -166,6 +165,7 @@ Label: BUFFER
 Operation: RESB
 Operand: 4096
 Errors: (NOT READY)
+
 .
 
 
@@ -175,13 +175,12 @@ Errors: (NOT READY)
 .
 
 
-
 Source line: RDREC   LDX     ZERO		CLEAR LOOP COUNTER
 
 Location counter: 0 (NOT READY)
 Label: RDREC
-Operation: DX
-Operand: ERO
+Operation: LDX
+Operand: ZERO
 Errors: (NOT READY)
 
 Source line: 	LDA     ZERO		CLEAR A TO ZERO
@@ -189,14 +188,14 @@ Source line: 	LDA     ZERO		CLEAR A TO ZERO
 Location counter: 0 (NOT READY)
 Label: 
 Operation: LDA
-Operand: ERO
+Operand: ZERO
 Errors: (NOT READY)
 
 Source line: RLOOP   TD      INPUT		TEST INPUT DEVICE
 
 Location counter: 0 (NOT READY)
 Label: RLOOP
-Operation: D
+Operation: TD
 Operand: INPUT
 Errors: (NOT READY)
 
@@ -205,7 +204,7 @@ Source line: 	JEQ     RLOOP		LOOP UNTIL READY
 Location counter: 0 (NOT READY)
 Label: 
 Operation: JEQ
-Operand: LOOP
+Operand: RLOOP
 Errors: (NOT READY)
 
 Source line: 	RD      INPUT		READ CHARACTER INTO REGISTAR A
@@ -229,7 +228,7 @@ Source line: 	JEQ     EXIT		EXIT LOOP IF EOF
 Location counter: 0 (NOT READY)
 Label: 
 Operation: JEQ
-Operand: XIT
+Operand: EXIT
 Errors: (NOT READY)
 
 Source line: 	STCH    BUFFER,X	STORE CHARCTER IN BUFFER
@@ -245,7 +244,7 @@ Source line: 	TIX     MAXLEN		LOOP UNLESS MAX LENGTH
 Location counter: 0 (NOT READY)
 Label: 
 Operation: TIX
-Operand: AXLEN
+Operand: MAXLEN
 Errors: (NOT READY)
 
 Source line: 	JLT     RLOOP	  	  HAS BEEN REACHED
@@ -253,7 +252,7 @@ Source line: 	JLT     RLOOP	  	  HAS BEEN REACHED
 Location counter: 0 (NOT READY)
 Label: 
 Operation: JLT
-Operand: LOOP
+Operand: RLOOP
 Errors: (NOT READY)
 
 Source line: EXIT    STX     LENGTH		SAVE RECORD LENGTH
@@ -261,7 +260,7 @@ Source line: EXIT    STX     LENGTH		SAVE RECORD LENGTH
 Location counter: 0 (NOT READY)
 Label: EXIT
 Operation: STX
-Operand: ENGTH
+Operand: LENGTH
 Errors: (NOT READY)
 
 Source line: 	RSUB                    RETURN TO CALLER
@@ -269,14 +268,14 @@ Source line: 	RSUB                    RETURN TO CALLER
 Location counter: 0 (NOT READY)
 Label: 
 Operation: RSUB
-Operand: 
+Operand: RETURN
 Errors: (NOT READY)
 
 Source line: INPUT   BYTE    X'F1'		CODE FOR INPUT DEVICE
 
 Location counter: 0 (NOT READY)
 Label: INPUT
-Operation: YTE
+Operation: BYTE
 Operand: X'F1'
 Errors: (NOT READY)
 
@@ -287,6 +286,7 @@ Label: MAXLEN
 Operation: WORD
 Operand: 4096
 Errors: (NOT READY)
+
 .
 
 
@@ -296,12 +296,11 @@ Errors: (NOT READY)
 .
 
 
-
 Source line: WRREC   LDX    ZERO		CLEAR LOOP COUNTER
 
 Location counter: 0 (NOT READY)
 Label: WRREC
-Operation: DX
+Operation: LDX
 Operand: ZERO
 Errors: (NOT READY)
 
@@ -309,8 +308,8 @@ Source line: WLOOP   TD     OUTPUT		TEST OUTPUT DEVICE
 
 Location counter: 0 (NOT READY)
 Label: WLOOP
-Operation: D
-Operand: UTPUT
+Operation: TD
+Operand: OUTPUT
 Errors: (NOT READY)
 
 Source line: 	JEQ    WLOOP		LOOP UNTIL READY
@@ -326,7 +325,7 @@ Source line: 	LDCH   BUFFER,X	        GET CHARCTER FROM BUFFER
 Location counter: 0 (NOT READY)
 Label: 
 Operation: LDCH
-Operand: UFFER,X
+Operand: BUFFER,X
 Errors: (NOT READY)
 
 Source line: 	WD     OUTPUT		WRITE CHARACTER
@@ -334,7 +333,7 @@ Source line: 	WD     OUTPUT		WRITE CHARACTER
 Location counter: 0 (NOT READY)
 Label: 
 Operation: WD
-Operand: UTPUT
+Operand: OUTPUT
 Errors: (NOT READY)
 
 Source line: 	TIX    LENGTH		LOOP UNTIL ALL CHARACTERS
@@ -358,7 +357,7 @@ Source line: 	RSUB                    RETURN TO CALLER
 Location counter: 0 (NOT READY)
 Label: 
 Operation: RSUB
-Operand: 
+Operand: RETURN
 Errors: (NOT READY)
 
 Source line: OUTPUT  BYTE   X'05'		CODE FOR OUTPUT DEVICE
@@ -366,7 +365,7 @@ Source line: OUTPUT  BYTE   X'05'		CODE FOR OUTPUT DEVICE
 Location counter: 0 (NOT READY)
 Label: OUTPUT
 Operation: BYTE
-Operand: '05'
+Operand: X'05'
 Errors: (NOT READY)
 
 Source line: 	END    FIRST
@@ -376,3 +375,4 @@ Label:
 Operation: END
 Operand: FIRST
 Errors: (NOT READY)
+

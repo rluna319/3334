@@ -1,21 +1,3 @@
 Label			Address
 
-COPY			0
-FIRST			0
-CLOOP			0
-ENDFIL			0
-EOF				0
-THREE			0
-ZERO			0
-RETADR			0
-LENGTH			0
-BUFFER			0
-RDREC			0
-RLOOP			0
-EXIT			0
-INPUT			0
-MAXLEN			0
-WRREC			0
-WLOOP			0
-OUTPUT			0
       			0

@@ -55,19 +55,7 @@ struct Token token[4];	//array Token (max of 4 tokens per line)
 struct ErrorFlags {char output[100];};	
 struct ErrorFlags Error[21]; //ErrorFlags array of strings (total of 21 possible errors in phase2)
 
-	void ErrorFlags();	//initializes Error definitions
-
-	/*void Error0(){printf("%s\n", Error[0].output);}
-	void Error1(){printf("%s\n", Error[1].output);}
-	void Error2(){printf("%s\n", Error[2].output);}
-	void Error3(){printf("%s\n", Error[3].output);}
-	void Error4(){printf("%s\n", Error[4].output);}					I probably don't need these... -_-
-	void Error5(){printf("%s\n", Error[5].output);}
-	void Error6(){printf("%s\n", Error[6].output);}
-	void Error7(){printf("%s\n", Error[7].output);}
-	void Error8(){printf("%s\n", Error[8].output);}
-	void Error9(){printf("%s\n", Error[9].output);}
-	//void Error10(){printf("%s\n", Error[10].output);}*/
+void ErrorFlags();	//initializes Error definitions
 
 //						--End ErrorFlags--
 
@@ -84,12 +72,8 @@ void split (char *, char *, char *, char *, int *);
 void Tokenize(char *);
 //Clears token[]
 void T_clear();
-//Prints to file
-void T_fprint();
 //Pass 1 (getting errors and writing to the 'symboltable' and 'intermediate' files)
 void Pass1();
-//get line if file being read
-void getLine(char *);
 //for easy oneliner conversion from string to hex
 long toHex(char);
 //insert label into SYMTAB
@@ -565,95 +549,57 @@ void ErrorFlags()
 void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
-	bool blank;		//blank token?
 	bool stop;		//early stop of line?
-	bool tab;		//was a tab used before token 4
-	bool rsub;		//is rsub used?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
-	cont = blank = true;
+	cont = true;
 	stop = false;
 
 	//if line is a comment do not tokenize
-	if (line[0] == '.') 
-	{
+	if (line[0] == '.') {
 		strcpy(token[3].str, line);
 		return;
 	}
 
+	if (line[0] == ' ' || line[0] == '\t') tok = 1;
+
 	//tokenize loop
-	for (int i = 0; tok < 4; i++)
+	while (tok < 3)
 	{
 		cont = true;
-		blank = true;
-		tab = false;
 		int begin = i;
-		memset(token[tok].str, '\0', 500);
+		memset(token[tok].str, 0, 500);
 
-		while(cont && line[i] != '\n')
+		while (cont)
 		{
-			switch(line[i])
+			switch (line[i])
 			{
-				case ' ':	//if space is hit
-					if (tok != 3){
-						cont = false;
-					}
-					else i++;
-					break;
-				case '\t':	//if tab is hit
-					if (tok != 3){
-						cont = false;
-						tab = true;
-					}
-					else {
-						begin++;
-						i++;
-					}
-					break;
-				case '\r':
-				case '\v':
-				case '\0':	//if empty char is hit
-					if (tok < 3) stop = true;
-					cont = false;
-					break;
-				case '\n':	//if newline is hit
-					if (tok < 3) stop = true;
-					cont = false;
-					break;
-				default:
-					blank = false;
-					i++;
+			case ' ':
+			case '\t':
+			case '\r':
+			case '\v':
+			case '\0':	//if empty char is hit
+				cont = false;
+				break;
+			case '\n':	//if newline is hit
+				stop = true;
+				cont = false;
+				break;
+			default:
+				i++;
 			}
 		}
 
-		if(!blank)
-		{
-			int end = i - begin;
-			memcpy(token[tok].str, &line[begin], end);
-			token[tok].str[end + 1] = '\0';
-			tcount++;
-			token[tok].hastoken = true;
-			//if RSUB skip operand token
-			if (tok == 1 && strcmp(token[1].str, "RSUB") == 0) {
-				tok++;
-			}
-			//get to next char
-			if (end <= 6 && tok != 2 && !tab) {
-				for (int j = i; j < 100; j++){
-					if (line[j] == ' ') j++;
-					else {
-						i = j - 1;  
-						break;
-					}
-				}					
-			}
+		if (i - begin > 0) {
+			memcpy(token[tok].str, &line[begin], i - begin);
+			tok++;
 		}
 
-		tok++;
+		i++;
 
-		if (stop) break;
+		if (stop || tok == 3) break;
 	}
 }
 
@@ -664,11 +610,6 @@ void T_clear()
 		strcpy(token[i].str, "\0");
 		token[i].hastoken = false;
 	}
-}
-
-void T_fprint()	//?? do i need this?? **************
-{
-
 }
 
 long toHex(char hstr)
@@ -835,12 +776,12 @@ void Pass1()
 		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
 
 		//print to intermediate file
-		fprintf(intermediate, "\nSource line: %s\n", line);
+		fprintf(intermediate, "Source line: %s\n", line);
 		fprintf(intermediate, "Location counter: %ld (NOT READY)\n", LC);
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fprintf(intermediate, "Errors: (NOT READY)\n");
+		fprintf(intermediate, "Errors: (NOT READY)\n\n");
 		//fclose(Errors);
 		//Errors = fopen(ErrFile, "r");
 		//fgets(ErrorLine, 100, Errors);
@@ -908,12 +849,12 @@ void Pass1()
 		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
 
 		//print to intermediate file
-		fprintf(intermediate, "\nSource line: %s\n", line);
+		fprintf(intermediate, "Source line: %s\n", line);
 		fprintf(intermediate, "Location counter: %ld (NOT READY)\n", LC);
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fprintf(intermediate, "Errors: (NOT READY)\n");
+		fprintf(intermediate, "Errors: (NOT READY)\n\n");
 		//fclose(Errors);
 		//Errors = fopen(ErrFile, "r");
 		//fgets(ErrorLine, 100, Errors);
@@ -939,10 +880,6 @@ void Pass1()
 
 	//double check that the temporary Error file was removed succesfully
 	//if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
-}
-
-void getLine(char *line)
-{
 }
 
 //**************************** UNFINISHED! :( ***************************//
