@@ -674,13 +674,13 @@ void symInsert(char *label, long addr)
 			strcpy(SYMTAB[symI].label, label);
 
 			//if the label is shorter than 4 chars then format it for SymbolTable.txt
-			for (int i = 0; i < 5; i++){
+			/*for (int i = 0; i < 5; i++){
 				if (SYMTAB[symI].label[i] == ' ') {
 					strcpy(ltmp, label);
 					strcat(ltmp, tab);
 					strcpy(SYMTAB[symI].label, ltmp);
 				}
-			}
+			}*/
 			SYMTAB[symI].address = addr;
 			symI++;
 		}
@@ -720,7 +720,7 @@ void smartLoc()
 	}
 	else if (strcmp(token[1].str, "BYTE") == 0){
 		char tmp[oplen];
-		for (int i = 0, j = 0; i < oplen && j < oplen; i++){	//*****
+		for (int i = 0, j = 0; i < oplen && j < oplen; i++){
 				tmp[j] = token[2].str[i];
 			}
 			int numlen = strcspn(tmp, "\'");
@@ -770,6 +770,8 @@ void Pass1()
 		tok3 = token[2].hastoken;
 		tok4 = token[3].hastoken;
 
+		smartLoc();	//get starting address
+
 		if (line[0] == '.')	//if comment only
 		{
 			if (token[3].str[0] != '.') fprintf(intermediate, ".%s\n\n", token[3].str);
@@ -780,7 +782,9 @@ void Pass1()
 		{
 			begin = true;		//start error checking
 
-			if (tok1) symInsert(token[0].str, locctr);
+			if (tok1) {
+				symInsert(token[0].str, locctr);
+			}
 			if (!tok2){	//missing start directive ** Error 2
 				//fprintf(Errors, "2 ");
 				ErrorCount++; 
@@ -811,8 +815,6 @@ void Pass1()
 
 		//Test print
 		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
-
-		smartLoc(); //increment location counter
 
 		//print to intermediate file
 		fprintf(intermediate, "Source line: %s\n", line);
@@ -888,6 +890,8 @@ void Pass1()
 
 		//Test print
 		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
+
+		smartLoc();
 
 		//print to intermediate file
 		fprintf(intermediate, "Source line: %s\n", line);
