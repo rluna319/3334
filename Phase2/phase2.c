@@ -821,9 +821,6 @@ void Pass1()
 					//fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
-				//else //locctr = toHex
-			
-			(*token[2].str);	//set location counter to starting address
 			}
 			if (!tok1 && !tok3 && tok2)	//RSUB
 			{
@@ -842,20 +839,20 @@ void Pass1()
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
 		fprintf(intermediate, "Errors: (NOT READY)\n\n");
-		//fclose(Errors);
-		//Errors = fopen(ErrFile, "r");
-		//fgets(ErrorLine, 100, Errors);
-		//fprintf(intermediate, "%s\n\n", ErrorLine);
-		//fprintf(Errors, "\n");
-		//fclose(Errors);
+	  /*fclose(Errors);
+		Errors = fopen(ErrFile, "r");
+		fgets(ErrorLine, 100, Errors);
+		fprintf(intermediate, "%s\n\n", ErrorLine);
+		fprintf(Errors, "\n");
+		fclose(Errors);*/
 	}
 
 	while (!feof(source) && !stop)
 	{
 		//open tmp file to push errors to
-		//Errors = fopen(ErrFile, "w");
-		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		//fprintf(Errors, "Error: ");
+	  /*Errors = fopen(ErrFile, "w");
+		if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+		fprintf(Errors, "Error: ");*/
 
 		fgets(line, 500, source);	//read in source line
 
@@ -893,9 +890,6 @@ void Pass1()
 					//fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
-				//else locctr = toHex
-			
-			(*token[2].str);	//set location counter to starting address
 			}
 			if (!tok1 && !tok3 && tok2)	//RSUB
 			{
@@ -919,12 +913,12 @@ void Pass1()
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
 		fprintf(intermediate, "Errors: (NOT READY)\n\n");
-		//fclose(Errors);
-		//Errors = fopen(ErrFile, "r");
-		//fgets(ErrorLine, 100, Errors);
-		//fprintf(intermediate, "%s\n\n", ErrorLine);
-		//fprintf(Errors, "\n");
-		//fclose(Errors);
+	  /*fclose(Errors);
+		Errors = fopen(ErrFile, "r");
+		fgets(ErrorLine, 100, Errors);
+		fprintf(intermediate, "%s\n\n", ErrorLine);
+		fprintf(Errors, "\n");
+		fclose(Errors);*/
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
@@ -943,6 +937,7 @@ void Pass1()
 	fclose(intermediate);
 	fclose(symboltable);
 	//fclose(Errors);
+	
 	//if (remove(ErrFile) == 1) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 
 	//double check that the temporary Error file was removed succesfully
