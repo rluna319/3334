@@ -2,14 +2,14 @@
 //3334-02
 /*
 		
-						Program Description
+				Program Description
 
 	This is phase 2 of my SIC (Simplified Instructional Computer) simulator.
-While phase 1 got the commands up and running. Phase 2 now implements pass 1 
-of the 2 pass assembler. Pass 1 will use the assemble command to generate
-a symbol table and an intermediate file. My intermediate file will contain 
-the source line, program counter, label, instruction, operand, and errors 
-generated. The following are the names of files being generated... 
+While phase 1 got the commands up and running. Phase 2 now implements pass 1 of 
+the 2 pass assembler. Pass 1 will use the assemble command to generate a symbol 
+table and an intermediate file. My intermediate file will contain the source line,
+program counter, label, instruction, operand, and errors generated. The following
+are the names of files being generated... 
 	
 	Symbol Table: 'SymbolTable.txt' 
 	Intermediate File: 'Intermediate.txt'
@@ -17,7 +17,7 @@ generated. The following are the names of files being generated...
 Currently the error generation part of this phase has not yet been implemented.
 I will be implementing it for phase 3.
 	
-							---end---
+       					end
 */
 
 #include <stdio.h>
