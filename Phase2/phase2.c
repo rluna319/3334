@@ -1,3 +1,25 @@
+//Ryan Luna
+//3334-02
+/*
+		
+						Program Description
+
+	This is phase 2 of my SIC (Simplified Instructional Computer) simulator.
+While phase 1 got the commands up and running. Phase 2 now implements pass 1 
+of the 2 pass assembler. Pass 1 will use the assemble command to generate
+a symbol table and an intermediate file. My intermediate file will contain 
+the source line, program counter, label, instruction, operand, and errors 
+generated. The following are the names of files being generated... 
+	
+	Symbol Table: 'SymbolTable.txt' 
+	Intermediate File: 'Intermediate.txt'
+
+Currently the error generation part of this phase has not yet been implemented.
+I will be implementing it for phase 3.
+	
+							---end---
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -33,7 +55,7 @@ void OpTable();
 //						--Start SymbolTable--
 struct SymbolTable
 {
-	char label[6];		//label (max = 6 chars)(alphanumeric)
+	char label[6];		//label (max = 6 chars)(alphadigitseric)
 	long address;		//label address
 };
 struct SymbolTable SYMTAB[500];	//SymbolTable array (max = 500 labels)
@@ -650,7 +672,8 @@ void symInsert(char *label, long addr)
 	bool found = false;		//is label already in symbol table?
 	bool operand = false;	//is label given in the operand field?
 	char ltmp[7];			//tmp file to mod label and strcat if needed
-	char tab[3] = "\t";	//holds tab char to format short labels
+	char tab[3] = "\t";		//holds tab char to format short labels
+	char space[3] = " ";	//holds space char to format short labels
 	int i;
 
 	if (addr == -1) operand = true; //otherwise label is in label field
@@ -674,13 +697,13 @@ void symInsert(char *label, long addr)
 			strcpy(SYMTAB[symI].label, label);
 
 			//if the label is shorter than 4 chars then format it for SymbolTable.txt
-			/*for (int i = 0; i < 5; i++){
+			for (int i = 0; i < 5; i++){
 				if (SYMTAB[symI].label[i] == ' ') {
 					strcpy(ltmp, label);
-					strcat(ltmp, tab);
+					strcat(ltmp, space);
 					strcpy(SYMTAB[symI].label, ltmp);
 				}
-			}*/
+			}
 			SYMTAB[symI].address = addr;
 			symI++;
 		}
@@ -698,14 +721,13 @@ void symInsert(char *label, long addr)
 
 void smartLoc()
 {
-	char **tptr;
 	long operand;
 	int oplen = strcspn(token[2].str, "\0");
 
 	if (token[2].hastoken){		//is there an operand?
 		operand = strtol(token[2].str, NULL, 10);
 	}
-	else if (!token[1].hastoken) locctr += 3;	//increment locctr when RSUB
+	else if (!token[0].hastoken) locctr += 3;	//increment locctr when RSUB
 	if (strcmp(token[1].str, "START") == 0) {	//set start address
 		locctr = operand;
 	}
@@ -719,13 +741,13 @@ void smartLoc()
 		locctr += 3;
 	}
 	else if (strcmp(token[1].str, "BYTE") == 0){
-		char tmp[oplen];
-		for (int i = 0, j = 0; i < oplen && j < oplen; i++){
-				tmp[j] = token[2].str[i];
-			}
-			int numlen = strcspn(tmp, "\'");
-		if (token[2].str[0] == 'C') locctr += numlen;
-		if (token[2].str[0] == 'X')	locctr += numlen/2;	//might need to add 
+		int digits = oplen - 3;
+
+		if (token[2].str[0] == 'C') locctr += digits;
+		if (token[2].str[0] == 'X'){
+			if (digits % 2 == 1) return;	//error: odd digitsber of digits when using X
+			else locctr += digits/2;
+		}	
 	}
 	else if (strcmp(token[1].str, "END") == 0){
 		progLen = locctr - progStart;
@@ -799,7 +821,7 @@ void Pass1()
 					//fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
-				else locctr = toHex
+				//else //locctr = toHex
 			
 			(*token[2].str);	//set location counter to starting address
 			}
@@ -812,9 +834,6 @@ void Pass1()
 				}
 			}
 		}
-
-		//Test print
-		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
 
 		//print to intermediate file
 		fprintf(intermediate, "Source line: %s\n", line);
@@ -874,7 +893,7 @@ void Pass1()
 					//fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
-				else locctr = toHex
+				//else locctr = toHex
 			
 			(*token[2].str);	//set location counter to starting address
 			}
@@ -912,11 +931,14 @@ void Pass1()
 
 	//print to symbol table
 	fprintf(symboltable, "Label			Address\n\n");
-	for (int i = 0; i < (symI + 1); i++){
+	for (int i = 0; i < (symI); i++){
 		fprintf(symboltable, "%s			%ld\n", SYMTAB[i].label, SYMTAB[i].address);
 	}
 
-	//close files and delete 'Error.tmp'
+	//status print
+	printf("Pass 1 Complete!\n");
+
+	//close files 
 	fclose(source);
 	fclose(intermediate);
 	fclose(symboltable);
@@ -927,4 +949,3 @@ void Pass1()
 	//if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 }
 
-//**************************** UNFINISHED! :( ***************************//
