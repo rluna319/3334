@@ -116,6 +116,7 @@ char line[500];		//stores line in file
 int tcount = 0;		//token counter
 int symI = 0;		//SYMTAB indexer/counter
 int ErrorCount = 0;	//Error count
+int SymCount = 0;	//# of Symbols
 char Sname[20];		//stores source file name
 char I_fname[20] = "Intermediate.txt";	//Intermediate filename
 char ST_fname[20] = "SymbolTable.txt";	//SymbolTable filename
@@ -896,6 +897,12 @@ void Pass1()
 
 		smartLoc();
 
+		if (locctr > 32768){	//program too long ** Error
+			fprintf (Errors, "7");
+			ErrorCount++;
+			break;
+		}
+
 		//print to intermediate file
 		fprintf(intermediate, "Source line: %s\n", line);
 		fprintf(intermediate, "Location counter: %ld\n", locctr);
@@ -914,20 +921,30 @@ void Pass1()
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
 
+	if (strcmp(token[i].str, "END") != 0){		//invalid or missing END directve ** Error 5
+		fprintf(Errors, "5");
+		ErrorCount++;
+	}
+
 	//print to symbol table
 	fprintf(symboltable, "Label			Address\n\n");
 	for (int i = 0; i < (symI); i++){
 		fprintf(symboltable, "%s			%ld\n", SYMTAB[i].label, SYMTAB[i].address);
 	}
 
-	//status print
-	printf("Pass 1 Complete!\n");
+	if (locctr > 32768){	//status print
+		printf("Unable to finish Pass 1 (Max program length has been reached)\n");
+	}
+	else {
+		//status print
+		printf("Pass 1 Complete!\n");
+	}
 
 	//close files 
 	fclose(source);
 	fclose(intermediate);
 	fclose(symboltable);
-	//fclose(Errors);
+	fclose(Errors);
 	
 	//if (remove(ErrFile) == 1) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 
