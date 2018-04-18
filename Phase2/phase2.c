@@ -775,9 +775,9 @@ void Pass1()
 	while(!feof(source) && !begin)
 	{	
 		//open tmp file to push errors to
-		//Errors = fopen(ErrFile, "w");
+		Errors = fopen(ErrFile, "w");
 		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		//fprintf(Errors, "Error: ");
+		fprintf(Errors, "Error: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -808,17 +808,17 @@ void Pass1()
 				symInsert(token[0].str, locctr);
 			}
 			if (!tok2){	//missing start directive ** Error 2
-				//fprintf(Errors, "2 ");
+				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
 			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
-				//fprintf(Errors, "2 ");
+				fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
 			else if (tok2 && strcmp(token[1].str, "START") == 0)
 			{
 				if(!tok3){ //missing starting address ** Error 4
-					//fprintf(Errors, "4 ");
+					fprintf(Errors, "4 ");
 					ErrorCount++;
 				} 
 			}
@@ -826,7 +826,7 @@ void Pass1()
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					//fprintf(Errors, "1 ");
+					fprintf(Errors, "1 ");
 					ErrorCount++;
 				}
 			}
@@ -839,20 +839,21 @@ void Pass1()
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
 		fprintf(intermediate, "Errors: (NOT READY)\n\n");
-	  /*fclose(Errors);
+	  	fclose(Errors);
 		Errors = fopen(ErrFile, "r");
 		fgets(ErrorLine, 100, Errors);
+		fclose(Errors);
+		Errors = fopen(ErrFile, "w");
 		fprintf(intermediate, "%s\n\n", ErrorLine);
 		fprintf(Errors, "\n");
-		fclose(Errors);*/
 	}
 
 	while (!feof(source) && !stop)
 	{
 		//open tmp file to push errors to
-	  /*Errors = fopen(ErrFile, "w");
-		if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		fprintf(Errors, "Error: ");*/
+	  	//Errors = fopen(ErrFile, "w");
+		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
+		fprintf(Errors, "Error: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -876,29 +877,18 @@ void Pass1()
 		else 	//if not a comment process line
 		{
 			if (tok1) symInsert(token[0].str, locctr);
-			if (!tok2){	//missing start directive ** Error 2
-				//fprintf(Errors, "2 ");
-				ErrorCount++; 
-			}
-			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
-				//fprintf(Errors, "2 ");
-				ErrorCount++;
-			}
-			else if (tok2 && strcmp(token[1].str, "START") == 0)
-			{
-				if(!tok3){ //missing starting address ** Error 4
-					//fprintf(Errors, "4 ");
-					ErrorCount++;
-				} 
-			}
+			
+			//
+
 			if (!tok1 && !tok3 && tok2)	//RSUB
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					//fprintf(Errors, "1 ");
+					fprintf(Errors, "1 ");
 					ErrorCount++;
 				}
 			}
+
 		}
 
 		//Test print
@@ -913,12 +903,13 @@ void Pass1()
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
 		fprintf(intermediate, "Errors: (NOT READY)\n\n");
-	  /*fclose(Errors);
+	  	fclose(Errors);
 		Errors = fopen(ErrFile, "r");
+		fclose(Errors);
+		Errors = fopen(ErrFile, "w");
 		fgets(ErrorLine, 100, Errors);
 		fprintf(intermediate, "%s\n\n", ErrorLine);
 		fprintf(Errors, "\n");
-		fclose(Errors);*/
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
