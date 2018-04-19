@@ -729,25 +729,52 @@ void smartLoc()
 		operand = strtol(token[2].str, NULL, 10);
 	}
 	else if (!token[0].hastoken) locctr += 3;	//increment locctr when RSUB
+
 	if (strcmp(token[1].str, "START") == 0) {	//set start address
 		locctr = operand;
 	}
 	else if (strcmp(token[1].str, "RESB") == 0){
-		locctr += operand;
+		if (isdigit(token[2].str) == 0){	//check if operand is int
+			fprintf(Errors, "2 ");
+			ErrorCount++;
+		}
+		else locctr += operand;
 	}
 	else if (strcmp(token[1].str, "RESW") == 0){
-		locctr += (3 * operand);
+		if (isdigit(token[2].str) == 0){	//check if operand is int
+			fprintf(Errors, "2 ");
+			ErrorCount++;
+		}
+		else locctr += (3 * operand);
 	}
 	else if (strcmp(token[1].str, "WORD") == 0){
-		locctr += 3;
+		if (isdigit(token[2].str) == 0){	//check if operand is int
+			fprintf(Errors, "2 ");
+			ErrorCount++;
+		}
+		else locctr += 3;
 	}
 	else if (strcmp(token[1].str, "BYTE") == 0){
 		int digits = oplen - 3;
 
+		//check for single quotes (i.e. X'4F') 
+		if (token[2].str[1] != '\'' || token[2].str[oplen - 1] != '\''){
+			fprint(Errors, "2 ");
+			ErrorCount++;
+			return;
+		}
 		if (token[2].str[0] == 'C') locctr += digits;
 		if (token[2].str[0] == 'X'){
-			if (digits % 2 == 1) return;	//error: odd digitsber of digits when using X
+			if (digits % 2 == 1) {	//error: odd number of digits when using X ** Error 2
+				fprintf(Errors, "2 ");
+				ErrorCount++;
+			 	return;
+			 }	
 			else locctr += digits/2;
+		}
+		else {	//invalid operand ** Error 2
+			fprintf(Errors, "2 ");
+			ErrorCount++;
 		}	
 	}
 	else if (strcmp(token[1].str, "END") == 0){
@@ -808,9 +835,13 @@ void Pass1()
 			if (tok1) {
 				symInsert(token[0].str, locctr);
 			}
-			if (!tok2){	//missing start directive ** Error 2
+			if (!tok2){	//missing operation ** Error 2
 				fprintf(Errors, "2 ");
 				ErrorCount++; 
+			}
+			else if (isdigit(token[1].str) == 0){	//if operand isn't a integer
+				fprintf(Errors, "2 ");
+				ErrorCount++;
 			}
 			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
 				fprintf(Errors, "2 ");
@@ -830,6 +861,10 @@ void Pass1()
 					fprintf(Errors, "1 ");
 					ErrorCount++;
 				}
+			}
+			if (strcmp(token[1].str, "RSUB") == 0 && tok3){ //invalid operation ** Error 1
+				printf(Errors, "1 ");
+				ErrorCount++
 			}
 		}
 
@@ -898,7 +933,7 @@ void Pass1()
 		smartLoc();
 
 		if (locctr > 32768){	//program too long ** Error
-			fprintf (Errors, "7");
+			fprintf (Errors, "7 ");
 			ErrorCount++;
 			break;
 		}
@@ -922,7 +957,7 @@ void Pass1()
 	}
 
 	if (strcmp(token[i].str, "END") != 0){		//invalid or missing END directve ** Error 5
-		fprintf(Errors, "5");
+		fprintf(Errors, "5 ");
 		ErrorCount++;
 	}
 
