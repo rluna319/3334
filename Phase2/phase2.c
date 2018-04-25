@@ -104,6 +104,8 @@ void symInsert(char *, long);
 void S_clear();
 //search funtion for symbol table
 bool symSearch(char *);
+//function to process index operands
+void indexOp(char *);
 
 
 //-----------------------Global Variables---------------------//
@@ -371,17 +373,25 @@ void dump (char *prm1, char *prm2)
 
 void help()
 {
-	printf ("----------------------------------------------------------------------------------------------------------\n");
+	printf ("\n");
 	printf ("			Here is a list of commands you may enter: \n\n");
-	printf ("	~ load <file> - Loads a specified file. \n");
-	printf ("	~ execute <program> - Calls the computer simulation program to execute the program that was previously loaded in memory. \n");
-	printf ("	~ debug - Starts the debugger. \n");
-	printf ("	~ dump <starting address (hexadecimal)> <ending address (hexadecimal)> - Dumps the memory in the specified range. \n");
-	printf ("	~ help - Lists available commands. \n");
-	printf ("	~ directory - (dir) Lists files within your directory. \n");
-	printf ("	~ exit - This will exit the simulator. Make sure to save your work! \n"); 
-	printf ("   	~ assemble - assembles the source file loaded. \n"); 
-	printf ("----------------------------------------------------------------------------------------------------------\n");
+	printf ("~ load <file> \n");
+	printf ("	- Loads a specified file. \n\n");
+	printf ("~ execute <program> \n");
+	printf ("	- Calls the computer simulation program to execute the program that was\n\tpreviously loaded in memory. \n\n");
+	printf ("~ debug \n");
+	printf ("	- Starts the debugger. \n\n");
+	printf ("~ dump <starting address (hexa)> <ending address (hex)> \n");
+	printf ("	- Starts the debugger. \n\n");
+	printf ("~ help \n");
+	printf ("	- Lists available commands. \n\n");
+	printf ("~ directory (dir)\n");
+	printf ("	- Lists files within your directory. \n\n");
+	printf ("~ exit \n");
+	printf ("	- This will exit the simulator. Make sure to save your work! \n\n"); 
+	printf ("~ assemble \n");
+	printf ("	- assembles the source file loaded. \n\n"); 
+	printf ("\n");
 }
 
 void assemble(char *prm1)
@@ -673,9 +683,9 @@ void symInsert(char *label, long addr)
 	bool found = false;		//is label already in symbol table?
 	bool operand = false;	//is label given in the operand field?
 	char ltmp[7];			//tmp file to mod label and strcat if needed
-	char tab[3] = "\t";		//holds tab char to format short labels
+	//char tab[3] = "\t";		//holds tab char to format short labels
 	char space[3] = " ";	//holds space char to format short labels
-	int i;
+	//int i;
 
 	if (addr == -1) operand = true; //otherwise label is in label field
 
@@ -728,7 +738,15 @@ void smartLoc()
 	if (token[2].hastoken){		//is there an operand?
 		operand = strtol(token[2].str, NULL, 10);
 	}
-	else if (!token[0].hastoken) locctr += 3;	//increment locctr when RSUB
+    else if (!token[0].hastoken) {
+        locctr += 3;	//increment locctr when RSUB
+        return;
+    }
+    else {  //invalid empty operand ** Error 2
+        fprintf(Errors, "2 ");
+        ErrorCount++;
+        return;
+    }
 
 	if (strcmp(token[1].str, "START") == 0) {	//set start address
 		locctr = operand;
@@ -759,7 +777,7 @@ void smartLoc()
 
 		//check for single quotes (i.e. X'4F') 
 		if (token[2].str[1] != '\'' || token[2].str[oplen - 1] != '\''){
-			fprint(Errors, "2 ");
+			fprintf(Errors, "2 ");
 			ErrorCount++;
 			return;
 		}
@@ -784,13 +802,27 @@ void smartLoc()
 
 }
 
+void indexOp(char *Operand)
+{
+	Operand = token[2].str;
+	int oplen = strcspn(Operand, "\0");
+	int comma = strcspn(Operand, ",");
+	if (Operand[oplen - 2] == ','){
+		if (Operand[comma] != 'X'){	//invalid operand if not X ??? does it have to be X???
+			fprintf(Errors, "2 ");
+			ErrorCount++; 
+		}
+	}
+	else return;
+}
+
 void Pass1()
 {
 	bool begin = false;				//has start been called?
 	bool stop = false;				//has stop of source file been
-	int length;						//length of line
+	//int length;						//length of line
 	bool tok1, tok2, tok3, tok4;	//does token exist?
-	char label[6];					//stores label to input as parameter
+	//char label[6];					//stores label to input as parameter
 	char ErrorLine[100];			//stores Error line in Errors to print to intermediate file
 	char ErrFile[20] = "Error.tmp";
 
@@ -839,7 +871,7 @@ void Pass1()
 				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
-			else if (isdigit(token[1].str) == 0){	//if operand isn't a integer
+			else if (isdigit(token[2].str) == 0){	//if operand isn't a integer
 				fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
@@ -863,8 +895,8 @@ void Pass1()
 				}
 			}
 			if (strcmp(token[1].str, "RSUB") == 0 && tok3){ //invalid operation ** Error 1
-				printf(Errors, "1 ");
-				ErrorCount++
+				fprintf(Errors, "1 ");
+				ErrorCount++;
 			}
 		}
 
@@ -956,7 +988,7 @@ void Pass1()
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
 
-	if (strcmp(token[i].str, "END") != 0){		//invalid or missing END directve ** Error 5
+	if (strcmp(token[1].str, "END") != 0){		//invalid or missing END directve ** Error 5
 		fprintf(Errors, "5 ");
 		ErrorCount++;
 	}
