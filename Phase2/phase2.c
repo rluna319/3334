@@ -421,7 +421,7 @@ void assemble(char *prm1)
 	}
 	else {
 		printf("	Error!\n	File not found. Filenames are case sensitive!\n\n");
-		printf("	-Remember you must load the source file prior to calling assemble-\n\n");
+		printf("	-Remember to include the file in the same directory as the program...\n\n");
 		return;
 	}	
 }
@@ -752,21 +752,21 @@ void smartLoc()
 		locctr = operand;
 	}
 	else if (strcmp(token[1].str, "RESB") == 0){
-		if (isdigit(token[2].str) == 0){	//check if operand is int
+		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
 			fprintf(Errors, "2 ");
 			ErrorCount++;
 		}
 		else locctr += operand;
 	}
 	else if (strcmp(token[1].str, "RESW") == 0){
-		if (isdigit(token[2].str) == 0){	//check if operand is int
+		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
 			fprintf(Errors, "2 ");
 			ErrorCount++;
 		}
 		else locctr += (3 * operand);
 	}
 	else if (strcmp(token[1].str, "WORD") == 0){
-		if (isdigit(token[2].str) == 0){	//check if operand is int
+		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
 			fprintf(Errors, "2 ");
 			ErrorCount++;
 		}
@@ -836,8 +836,7 @@ void Pass1()
 	{	
 		//open tmp file to push errors to
 		Errors = fopen(ErrFile, "w");
-		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		fprintf(Errors, "Error: ");
+		fprintf(Errors, "Errors: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -871,10 +870,6 @@ void Pass1()
 				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
-			else if (isdigit(token[2].str) == 0){	//if operand isn't a integer
-				fprintf(Errors, "2 ");
-				ErrorCount++;
-			}
 			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
 				fprintf(Errors, "2 ");
 				ErrorCount++;
@@ -906,22 +901,22 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fprintf(intermediate, "Errors: (NOT READY)\n\n");
+		//fprintf(intermediate, "Errors: (NOT READY)\n\n");
 	  	fclose(Errors);
 		Errors = fopen(ErrFile, "r");
 		fgets(ErrorLine, 100, Errors);
 		fclose(Errors);
 		Errors = fopen(ErrFile, "w");
-		fprintf(intermediate, "%s\n\n", ErrorLine);
+		fprintf(intermediate, "%s", ErrorLine);
+		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		else fprintf(intermediate, "\n\n");
 		fprintf(Errors, "\n");
 	}
 
 	while (!feof(source) && !stop)
 	{
 		//open tmp file to push errors to
-	  	//Errors = fopen(ErrFile, "w");
-		//if (!Errors) printf("!!Unable to open 'Error.tmp' for writing. *LINE: %d\n\n", __LINE__);
-		fprintf(Errors, "Error: ");
+		fprintf(Errors, "Errors: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -976,13 +971,15 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fprintf(intermediate, "Errors: (NOT READY)\n\n");
+		//fprintf(intermediate, "Errors: (NOT READY)\n\n");
 	  	fclose(Errors);
 		Errors = fopen(ErrFile, "r");
 		fclose(Errors);
 		Errors = fopen(ErrFile, "w");
 		fgets(ErrorLine, 100, Errors);
-		fprintf(intermediate, "%s\n\n", ErrorLine);
+		fprintf(intermediate, "%s", ErrorLine);
+		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		else fprintf(intermediate, "\n\n");
 		fprintf(Errors, "\n");
 
 		if (strcmp(token[1].str, "END") == 0) break;
@@ -1012,10 +1009,5 @@ void Pass1()
 	fclose(intermediate);
 	fclose(symboltable);
 	fclose(Errors);
-	
-	//if (remove(ErrFile) == 1) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
-
-	//double check that the temporary Error file was removed succesfully
-	//if (Errors != NULL) printf("!Error.tmp was not successfully removed! *Line: %d\n\n", __LINE__);
 }
 
