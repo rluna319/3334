@@ -13,11 +13,8 @@ are the names of files being generated...
 	
 	Symbol Table: 'SymbolTable.txt' 
 	Intermediate File: 'Intermediate.txt'
-
-Currently the error generation part of this phase has not yet been implemented.
-I will be implementing it for phase 3.
 	
-       					end
+       			end Program Description
 */
 
 #include <stdio.h>
@@ -1009,5 +1006,7 @@ void Pass1()
 	fclose(intermediate);
 	fclose(symboltable);
 	fclose(Errors);
+
+	if (remove(ErrFile) == -1) printf("Error removing Error.tmp\n\n");
 }
 
