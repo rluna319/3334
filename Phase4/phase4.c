@@ -25,11 +25,11 @@ I will be implementing it for phase 3.
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include <sicengine.c>
+#include "sicengine.c"
 
 //-----------------------SIC Commands--------------------------//
 
-void loadf (char *);
+void loadf (prm1);
 void execute ();
 void debug ();
 void dump (char *, char *);
@@ -84,7 +84,7 @@ void ErrorFlags();	//initializes Error definitions
 
 //-----------------------File Declarations--------------------//
 
-FILE *source, *intermediate, *symboltable, *Errors, *randi;
+FILE *source, *intermediate, *symboltable, *Errors, *obj;
 
 
 //-----------------------Program Functions--------------------//  
@@ -165,7 +165,7 @@ int main()
 		{
 			if (n == 1) 
 			{exit = true;}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
 		
 		//call help function
@@ -177,7 +177,7 @@ int main()
 				help();
 				printf ("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
 		
 		//call directory function
@@ -189,7 +189,7 @@ int main()
 				system("ls");
 				printf ("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
 				
 		//call load function
@@ -201,19 +201,19 @@ int main()
 				loadf(prm1);
 				printf ("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
  		}
 		
 		//call execute funtion
 		else if (strcmp(cmd, "execute") == 0)
 		{
-			if (n == 2)
+			if (n == 1)
 			{
 				printf ("\n");
 				execute();
 				printf ("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
 
 		//call debug funtion
@@ -225,7 +225,7 @@ int main()
 				debug ();
 				printf("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
 
 		//call dump function
@@ -237,7 +237,7 @@ int main()
 				dump (prm1, prm2);
 				printf("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
 
 		//call assemble funtion
@@ -249,9 +249,9 @@ int main()
 				assemble(prm1);
 				printf("\n");
 			}
-			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+			else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 		}
-		else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
+		else printf ("\nInvalid entry. Type 'help' for a list of commands.\n\n");
 	}
 	
 
@@ -344,28 +344,28 @@ void split (char *str, char *cmd, char *prm1, char *prm2, int *n)
 
 void loadf(char *prm1)
 {
-	randi = fopen(prm1, "r");
-	if (randi == NULL)		//file not located (stop loadf)
+	obj = fopen(prm1, "r");
+	if (obj == NULL)		//file not located (stop loadf)
 	{
 		printf ("%s does not exist.\nPlease try again.", prm1);
-		printf ("Remember that filenames are case-sensitive...\n\n");
+		printf ("Remember that filenames are case-sensitive...\n");
 		return;
 	}
 
-	string LINE;
-	fgets(LINE, 500, randi);	//grab object file header
+	char LINE[128];
+	fgets(LINE, 128, obj);	//grab object file header
 
-	if (strcspn(LINE, "\0") < 19) {
-		printf("Error in object file header...\n\n");
-		return
+	if (strlen(LINE) < 19) {
+		printf("Error in object file header...\n");
+		return;
 	}
 
-	unsigned long loadAddr = 0;
+	/*ADDRESS loadAddr;
 	int lineLength = 0;
 
 	BYTE memContents;
 
-	while(fgets(LINE, 500, randi)){
+	while(fgets(LINE, 128, obj)){
 
 		if (strcspn(LINE, "\0") == 0){
 			printf("Error in object file text record...\n\n");
@@ -391,11 +391,66 @@ void loadf(char *prm1)
 		lineLength = strtol(substr(LINE,7,2), NULL, 16) * 2;
 
 		for (int i = 0; i < lineLength; i += 2){
-			memContents = strtol(substr(LINE,9+j,2), NULL, 16);
+			memContents = strtol(substr(LINE,9+i,2), NULL, 16);
 			PutMem(loadAddr, &memContents, 0);
 			++loadAddr;
 		}
 
+	}*/
+	char tmp[6], tmp2[2], tmp3[2];
+
+	int length, LINEAd, LINENum;
+	int location = 1;
+	int bytehex = 0;
+	char *byte;
+
+	//loop through file
+	while(fgets(LINE, 128, obj)){
+
+		length =strlen(LINE)-1;
+		location = 1;
+
+		//if (LINE[0] != 'T'){
+		//	printf("Error in object file text record...\n");
+		//	return;
+		//}
+
+		if (LINE[0] == 'E' && strcspn(LINE, "\0") != 7){
+			printf("Error in object file end record...\n");
+			return;
+		}
+		else if (LINE[0] == 'E'){
+			PutPC(strtol(substr(LINE,1,6), NULL, 16));
+			break;
+		}
+
+		//start LINE address
+		for(int i = 1; i<=6; i++){
+			tmp[i-1] = LINE[i];
+			location++;
+		}
+		sscanf(tmp, "%x", &LINEAd);
+
+		for(int i = 0; i < 2; i++){
+			tmp2[i] = LINE[location];
+			location++;
+		}
+		//number of lines/records
+		sscanf(tmp2, "%d", &LINENum);
+
+		while(location < length){
+			for(int i = 0; i < 2; i++){
+				tmp3[i] = LINE[location];
+				location++;
+			}
+
+			//store in bytes
+			sscanf(tmp3, "%02x", &bytehex);
+			byte = (char *)&bytehex;
+			//load into memory
+			PutMem(LINEAd, byte, 0);	
+			LINEAd++;
+		}
 	}
 
 	printf("Load complete!\n\n");
@@ -403,7 +458,7 @@ void loadf(char *prm1)
 
 void execute ()
 {
-	ADDRESS eAddr, tPC
+	ADDRESS eAddr, tPC;
 
 	eAddr = tPC = GetPC();
 	SICRun(&eAddr, 0);
@@ -424,45 +479,48 @@ void dhelp()
 
 void debug()
 {
-	char COMMAND = "r", newREG;
+	char COMMAND = 'd', newREG;
 	char hex[16];
 	ADDRESS eAddr, tmpPC, PC, memLoc;
 	WORD REG[6];
 	WORD rA, rX, rL,rSW, newWord;
 	BYTE newByte;
+	bool intro = true;
 
 	eAddr = tmpPC = GetPC();
 
 	printf("Entering Debug Mode...\nType 'h' for a list of commands...\n");
 
-	while(COMMAND != 'q'){
+	while(COMMAND != 'k'){
 
 		printf("\ndebug> ");
-		COMMAND = getchar();
 
+		scanf(" %c", &COMMAND);
 		COMMAND = tolower(COMMAND);
 
 		switch(COMMAND){
-			case 'h':
+	
+			case 'h':	//print commands
 				dhelp();
 				break;
+
 			case 'p': //print registers
 
 				GetReg(REG);
-				printf("\n  A: ");
+				printf("\n\tA: ");
 				for(int i = 0; i < 3; ++i){
 					printf("%02X  ", (unsigned long)REG[0][i]);
 				}
-				printf("	X: ");
+				printf("\n\tX: ");
 				for(int i = 0; i < 3; ++i){
 					printf("%02X  ", (unsigned long)REG[1][i]);
 				}
-				printf("	L: ");
+				printf("\n\tL: ");
 				for(int i = 0; i < 3; ++i){
 					printf("%02X  ", (unsigned long)REG[2][i]);
 				}
-				printf("	PC: %02X", (unsigned long)GetPC());
-				printf("	SW: %c", GetCC());
+				printf("\n\tPC: %02X", (unsigned long)GetPC());
+				printf("\n\tSW: %c\n", GetCC());
 				break;
 
 			case'c':	//change value of register or contents at specified mem location
@@ -494,7 +552,7 @@ void debug()
 								}
 								PutReg(REG);
 							}
-							else printf("\tInvalid input...\n")
+							else printf("\tInvalid input...\n");
 							break;
 
 						case 'x':	//X register
@@ -504,7 +562,7 @@ void debug()
 								}
 								PutReg(REG);
 							}
-							else printf("\tInvalid input...\n")
+							else printf("\tInvalid input...\n");
 							break;
 
 						case 'l':	//L register
@@ -514,14 +572,13 @@ void debug()
 								}
 								PutReg(REG);
 							}
-							else printf("\tInvalid input...\n")
+							else printf("\tInvalid input...\n");
 							break;
 
 						case 'm':	//Memory location
-							char *Hptr = hex;
-							memLoc = strtol(Hptr, NULL, 16);
+							
+							memLoc = strtol(substr(hex,0,strcspn(hex, "\0")), NULL, 16);
 							for (int i = 0; i < strcspn(hex, "\0"); i++) hex[i] = '\0';	//clear hex
-							free(Hptr);
 
 							printf("[byte -> 2 HEX digits][word -> 6 HEX digits]\n");
 							printf("\n\tInput: ");
@@ -535,8 +592,7 @@ void debug()
 								PutMem(memLoc, newWord, 1);
 							}
 							else if (strcspn(hex, "\0") == 2){
-								*Hptr = hex;
-								newByte = strtol(Hptr, NULL, 16);
+								newByte = strtol(substr(hex, 0, strcspn(hex, "\0")), NULL, 16);
 								PutMem(memLoc, newByte, 0);
 							}
 							else printf("\tInvalid input...\n");
@@ -544,6 +600,7 @@ void debug()
 
 						default:
 							printf("Command not recognized...\n\n");
+							break;
 
 					}//end inner switch
 
@@ -563,20 +620,22 @@ void debug()
 
 			case 'q':
 				printf("\tQuit debugging? (y/n): ");
-
-				if (tolower(getchar()) == 'n') COMMAND = 'r';	//change COMMAND to allow while loop to continue
+				char input;
+				scanf(" %c", &input);
+				input = tolower(input);
+				if (tolower(input) == 'y') COMMAND = 'k';	//change COMMAND to allow while loop to continue
 
 				break;
 
 			default:
 
-				printf("\tCommand not recognized...\n\n");
+				printf("\tCommand not recognized. Type 'h' for a list of commands...\n\n");
 				break;
 		}//end outer switch
 	}
-
-	PutPC(tPC);
-	printf("Quiting Debug Mode!");
+	getchar();
+	PutPC(tmpPC);
+	printf("\nQuiting Debug Mode...\n");
 }
 
 void dump (char *prm1, char *prm2)
@@ -601,15 +660,16 @@ void dump (char *prm1, char *prm2)
 			printf("\tPress any key to continue...");
 			getchar();
 		}
-	}
+	
 
-	printf("%lu:", startAddr);
-	for (int i = 0; i < 16; ++i){
-		GetMem(startAddr + i, &value, 0);
-		printf("%02X  ", (int)value);		//%02x 0 fill(padding) with 2 digits of precision in hex
+		printf("%04X: ", startAddr);
+		for (int i = 0; i < 16; ++i){
+			GetMem(startAddr + i, &value, 0);
+			printf("%02X  ", (int)value);		//%02x 0 fill(padding) with 2 digits of precision in hex
+		}
+		startAddr += 16;
+		printf("\n");
 	}
-	startAddr += 16;
-	printf("\n");
 }
 
 void help()
@@ -881,7 +941,7 @@ char* substr(char* string, int pos, int length)
 	char sub[100];
 	int c = 0;
 	while (c < length) {
-		sub[c] = string[position+c-1];
+		sub[c] = string[pos+c-1];
 		c++;
 	}
 	sub[c] = '\0';
