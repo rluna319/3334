@@ -25,11 +25,12 @@ I will be implementing it for phase 3.
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <sicengine.c>
 
 //-----------------------SIC Commands--------------------------//
 
 void loadf (char *);
-void execute (char *);
+void execute ();
 void debug ();
 void dump (char *, char *);
 void help ();
@@ -106,6 +107,8 @@ void S_clear();
 bool symSearch(char *);
 //function to process index operands
 void indexOp(char *);
+//gets substring of a char array (string)
+char* substr(char*, int, int);
 
 
 //-----------------------Global Variables---------------------//
@@ -128,6 +131,7 @@ char ST_fname[20] = "SymbolTable.txt";	//SymbolTable filename
 
 int main()
 {
+	SICInit();
 
 	char str[80], cmd[10], prm1[20], prm2[20];
 	int length, n;
@@ -146,7 +150,7 @@ int main()
 		printf("$$$: ");
 	
 		//get input	
-        	fgets (str, 80, stdin);
+        fgets (str, 80, stdin);
 
 		//get rid of trailing newline
 		length = strlen(str) - 1;
@@ -206,7 +210,7 @@ int main()
 			if (n == 2)
 			{
 				printf ("\n");
-				execute (prm1);
+				execute();
 				printf ("\n");
 			}
 			else printf ("Invalid entry. Type 'help' for a list of commands.\n\n");
@@ -347,28 +351,265 @@ void loadf(char *prm1)
 		printf ("Remember that filenames are case-sensitive...\n\n");
 		return;
 	}
-	else printf ("%s successfully loaded\n", prm1);	//file located
 
-	fclose(randi);
+	string LINE;
+	fgets(LINE, 500, randi);	//grab object file header
 
-	return;
+	if (strcspn(LINE, "\0") < 19) {
+		printf("Error in object file header...\n\n");
+		return
+	}
+
+	unsigned long loadAddr = 0;
+	int lineLength = 0;
+
+	BYTE memContents;
+
+	while(fgets(LINE, 500, randi)){
+
+		if (strcspn(LINE, "\0") == 0){
+			printf("Error in object file text record...\n\n");
+			return;
+		}
+
+		if (LINE[0] == 'E' && strcspn(LINE, "\0") != 7){
+			printf("Error in object file end record...\n\n");
+			return;
+		}
+		else if (LINE[0] == 'E'){
+			PutPC(strtol(substr(LINE,1,6), NULL, 16));
+			break;
+		}
+
+		if (LINE[0] != 'T' || strcspn(LINE, "\0") < 19){
+			printf("Error in object file text record");
+			return;
+		}
+
+		loadAddr = strtol(substr(LINE,1,6), NULL, 16);
+
+		lineLength = strtol(substr(LINE,7,2), NULL, 16) * 2;
+
+		for (int i = 0; i < lineLength; i += 2){
+			memContents = strtol(substr(LINE,9+j,2), NULL, 16);
+			PutMem(loadAddr, &memContents, 0);
+			++loadAddr;
+		}
+
+	}
+
+	printf("Load complete!\n\n");
 }
 
-void execute (char *prm1)
+void execute ()
 {
-	printf ("'execute' command recognized! \n");
-	printf ("Parameter: %s \n", prm1);
+	ADDRESS eAddr, tPC
+
+	eAddr = tPC = GetPC();
+	SICRun(&eAddr, 0);
+
+	printf("Execution Complete!");
+}
+
+void dhelp()
+{
+	printf("\n\t\tHere is a list of the debugger commands...\n");
+	printf("\n\t'h' ~ Print out help menu.");
+	printf("\n\t'p' ~ Print contents of all registers.");
+	printf("\n\t'c' ~ Change contents of a register or memory location.");
+	printf("\n\t's' ~ Step forward.");
+	printf("\n\t'r' ~ Run the entire program.");
+	printf("\n\t'q' ~ Quit debugging.\n\n");
 }
 
 void debug()
 {
-	printf ("'debug' command recognized! \n");
+	char COMMAND = "r", newREG;
+	char hex[16];
+	ADDRESS eAddr, tmpPC, PC, memLoc;
+	WORD REG[6];
+	WORD rA, rX, rL,rSW, newWord;
+	BYTE newByte;
+
+	eAddr = tmpPC = GetPC();
+
+	printf("Entering Debug Mode...\nType 'h' for a list of commands...\n");
+
+	while(COMMAND != 'q'){
+
+		printf("\ndebug> ");
+		COMMAND = getchar();
+
+		COMMAND = tolower(COMMAND);
+
+		switch(COMMAND){
+			case 'h':
+				dhelp();
+				break;
+			case 'p': //print registers
+
+				GetReg(REG);
+				printf("\n  A: ");
+				for(int i = 0; i < 3; ++i){
+					printf("%02X  ", (unsigned long)REG[0][i]);
+				}
+				printf("	X: ");
+				for(int i = 0; i < 3; ++i){
+					printf("%02X  ", (unsigned long)REG[1][i]);
+				}
+				printf("	L: ");
+				for(int i = 0; i < 3; ++i){
+					printf("%02X  ", (unsigned long)REG[2][i]);
+				}
+				printf("	PC: %02X", (unsigned long)GetPC());
+				printf("	SW: %c", GetCC());
+				break;
+
+			case'c':	//change value of register or contents at specified mem location
+
+				printf("\n Choose a register or memory location: ");
+				newREG = tolower(getchar());
+
+				if (newREG != 'a' && newREG != 'x' && newREG != 'l' && newREG != 'm'){
+					printf("\n Invalid entry...Select one of the following:");
+					printf("\n\tA X L M(Memory Location)\n\n");
+				}
+				else {
+
+					GetReg(REG);
+					if (newREG == 'a' || newREG == 'x' || newREG == 'l'){
+						printf("[Register %c]\n\n\tInput (6 HEX digits): ", toupper(newREG));
+					}
+					else printf("\tSpecify memory location (HEX): ");
+				
+					fgets(hex, 16, stdin);
+
+					printf("\n");
+
+					switch(newREG){
+						case 'a':	//A register
+							if (strcspn(hex, "\0") == 6){
+								for (int i = 0; i < 3; ++i){
+									REG[0][i] = strtol(substr(hex, i*2, 2), NULL, 16);
+								}
+								PutReg(REG);
+							}
+							else printf("\tInvalid input...\n")
+							break;
+
+						case 'x':	//X register
+							if (strcspn(hex, "\0") == 6){
+								for (int i = 0; i < 3; ++i){
+									REG[1][i] = strtol(substr(hex, i*2, 2), NULL, 16);
+								}
+								PutReg(REG);
+							}
+							else printf("\tInvalid input...\n")
+							break;
+
+						case 'l':	//L register
+							if (strcspn(hex, "\0") == 6){
+								for (int i = 0; i < 3; ++i){
+									REG[2][i] = strtol(substr(hex, i*2, 2), NULL, 16);
+								}
+								PutReg(REG);
+							}
+							else printf("\tInvalid input...\n")
+							break;
+
+						case 'm':	//Memory location
+							char *Hptr = hex;
+							memLoc = strtol(Hptr, NULL, 16);
+							for (int i = 0; i < strcspn(hex, "\0"); i++) hex[i] = '\0';	//clear hex
+							free(Hptr);
+
+							printf("[byte -> 2 HEX digits][word -> 6 HEX digits]\n");
+							printf("\n\tInput: ");
+							fgets(hex, 16, stdin);
+							printf("\n");
+
+							if (strcspn(hex, "\0") == 6){
+								for(int i = 0; i < 3; ++i){
+									newWord[i] = strtol(substr(hex, i*2, 2), NULL, 16);
+								}
+								PutMem(memLoc, newWord, 1);
+							}
+							else if (strcspn(hex, "\0") == 2){
+								*Hptr = hex;
+								newByte = strtol(Hptr, NULL, 16);
+								PutMem(memLoc, newByte, 0);
+							}
+							else printf("\tInvalid input...\n");
+							break;
+
+						default:
+							printf("Command not recognized...\n\n");
+
+					}//end inner switch
+
+				}//end else
+
+					break;
+
+			case 's': 
+
+				SICRun(&eAddr, 1);	//step forward by 1
+				break;	
+			
+			case 'r':
+
+				SICRun(&eAddr, 0);	//run entire program
+				break;
+
+			case 'q':
+				printf("\tQuit debugging? (y/n): ");
+
+				if (tolower(getchar()) == 'n') COMMAND = 'r';	//change COMMAND to allow while loop to continue
+
+				break;
+
+			default:
+
+				printf("\tCommand not recognized...\n\n");
+				break;
+		}//end outer switch
+	}
+
+	PutPC(tPC);
+	printf("Quiting Debug Mode!");
 }
 
 void dump (char *prm1, char *prm2)
 {
-	printf ("'dump' command recognized! \n");
-	printf ("Parameter 1: %s \nParameter 2: %s \n", prm1, prm2);
+	BYTE value;
+	ADDRESS startAddr = strtol(prm1, NULL, 16);
+	ADDRESS endAddr = strtol(prm2, NULL, 16);
+
+	if (startAddr > endAddr) {
+		printf("Starting address is greater than ending address.\n");
+		printf("Swaping start and end values...");
+
+		ADDRESS tmp = endAddr;
+		endAddr = startAddr;
+		startAddr = tmp;
+	}
+
+	int pause = 0;
+	while(startAddr <= endAddr){
+		++pause;
+		if (pause % 20 == 0){
+			printf("\tPress any key to continue...");
+			getchar();
+		}
+	}
+
+	printf("%lu:", startAddr);
+	for (int i = 0; i < 16; ++i){
+		GetMem(startAddr + i, &value, 0);
+		printf("%02X  ", (int)value);		//%02x 0 fill(padding) with 2 digits of precision in hex
+	}
+	startAddr += 16;
+	printf("\n");
 }
 
 void help()
@@ -635,6 +876,26 @@ void Tokenize(char *line)
 	}
 }
 
+char* substr(char* string, int pos, int length)
+{
+	char sub[100];
+	int c = 0;
+	while (c < length) {
+		sub[c] = string[position+c-1];
+		c++;
+	}
+	sub[c] = '\0';
+	char *substring = sub;
+
+	return substring;	
+}
+
+long toHex(char hstr)
+{
+	char *p;
+	return strtol(&hstr, &p, 16);
+}
+
 void T_clear()
 {
 	for (int i = 0; i < 4; i++)
@@ -642,12 +903,6 @@ void T_clear()
 		strcpy(token[i].str, "\0");
 		token[i].hastoken = false;
 	}
-}
-
-long toHex(char hstr)
-{
-	char *p;
-	return strtol(&hstr, &p, 16);
 }
 
 void S_clear()
