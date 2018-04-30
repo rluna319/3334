@@ -352,6 +352,14 @@ void loadf(char *prm1)
 		return;
 	}
 
+
+	char tmp[6], tmp2[2], tmp3[2];
+
+	int length, LINEAddr, LINENum;
+	int location = 1;
+	int bytehex = 0;
+	char *byte;
+
 	char LINE[128];
 	fgets(LINE, 128, obj);	//grab object file header
 
@@ -359,50 +367,10 @@ void loadf(char *prm1)
 		printf("Error in object file header...\n");
 		return;
 	}
-
-	/*ADDRESS loadAddr;
-	int lineLength = 0;
-
-	BYTE memContents;
-
-	while(fgets(LINE, 128, obj)){
-
-		if (strcspn(LINE, "\0") == 0){
-			printf("Error in object file text record...\n\n");
-			return;
-		}
-
-		if (LINE[0] == 'E' && strcspn(LINE, "\0") != 7){
-			printf("Error in object file end record...\n\n");
-			return;
-		}
-		else if (LINE[0] == 'E'){
-			PutPC(strtol(substr(LINE,1,6), NULL, 16));
-			break;
-		}
-
-		if (LINE[0] != 'T' || strcspn(LINE, "\0") < 19){
-			printf("Error in object file text record");
-			return;
-		}
-
-		loadAddr = strtol(substr(LINE,1,6), NULL, 16);
-
-		lineLength = strtol(substr(LINE,7,2), NULL, 16) * 2;
-
-		for (int i = 0; i < lineLength; i += 2){
-			memContents = strtol(substr(LINE,9+i,2), NULL, 16);
-			PutMem(loadAddr, &memContents, 0);
-			++loadAddr;
-		}
-
-	}*/
-	char tmp[6], tmp2[2], tmp3[2];
-
-	int length, LINEAd, LINENum;
-	int location = 1;
-	int bytehex = 0;
-	char *byte;
+	else if (LINE[0] != 'H') {
+		printf("Error in object file header...\n");
+		return;
+	}
 
 	//loop through file
 	while(fgets(LINE, 128, obj)){
@@ -410,17 +378,18 @@ void loadf(char *prm1)
 		length =strlen(LINE)-1;
 		location = 1;
 
-		//if (LINE[0] != 'T'){
-		//	printf("Error in object file text record...\n");
-		//	return;
-		//}
-
 		if (LINE[0] == 'E' && strcspn(LINE, "\0") != 7){
 			printf("Error in object file end record...\n");
 			return;
 		}
 		else if (LINE[0] == 'E'){
-			PutPC(strtol(substr(LINE,1,6), NULL, 16));
+			char end[6];
+			for(int i = 1; i<=6; i++){
+				end[i-1]=LINE[i];
+			}
+			sscanf(end, "%06X", &progStart);
+			ADDRESS pStart = progStart;
+			PutPC(pStart);
 			break;
 		}
 
@@ -429,7 +398,7 @@ void loadf(char *prm1)
 			tmp[i-1] = LINE[i];
 			location++;
 		}
-		sscanf(tmp, "%x", &LINEAd);
+		sscanf(tmp, "%x", &LINEAddr);
 
 		for(int i = 0; i < 2; i++){
 			tmp2[i] = LINE[location];
@@ -448,20 +417,19 @@ void loadf(char *prm1)
 			sscanf(tmp3, "%02x", &bytehex);
 			byte = (char *)&bytehex;
 			//load into memory
-			PutMem(LINEAd, byte, 0);	
-			LINEAd++;
+			PutMem(LINEAddr, byte, 0);	
+			LINEAddr++;
 		}
 	}
 
-	printf("Load complete!\n\n");
+	printf("Load complete!\n");
 }
 
 void execute ()
 {
-	ADDRESS eAddr, tPC;
+	unsigned long tmp = (long unsigned long)progStart;
 
-	eAddr = tPC = GetPC();
-	SICRun(&eAddr, 0);
+	SICRun(&tmp, 0);
 
 	printf("Execution Complete!");
 }
