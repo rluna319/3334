@@ -427,11 +427,12 @@ void loadf(char *prm1)
 
 void execute ()
 {
-	unsigned long tmp = (long unsigned long)progStart;
+	//unsigned long tmp = (long unsigned long)progStart;
+	ADDRESS eAddr = GetPC();
 
-	SICRun(&tmp, 0);
+	SICRun(&eAddr, 0);
 
-	printf("Execution Complete!");
+	printf("Execution Complete!\n");
 }
 
 void dhelp()
