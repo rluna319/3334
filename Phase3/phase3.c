@@ -1425,17 +1425,21 @@ void Pass2()
 						fieldLen = (strlen(IFL[5]) - 3)*2;
 						//get the 2 nums between the '' i.e.--> C'23' 
 						for(int i = 2; i != strlen(IFL[5]) - 1; ++i){
-							strcat(oField, "%02X", (int)IFL[5][i]);				//FIX too many args
+
+							strcat(oField, IFL[5][i]);				//WATCH
 						}
 					}
 					else{
 						fieldLen = strlen(IFL[5]) - 3;
-						strcat(oField, "%02X", substr(IFL[5], 2, strlen(IFL[5] - 3)));		//FIX too many args
+
+						strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH
 					}
 				}
 				else if (IFL[4] == "WORD"){
 					atRes = false;
 					fieldLen = 6; 	//one word is 6 hex digits
+					int X = 0;
+					if (strlen(IFL[5] < 6)) X = 6 - strlen(IFL[5]);
 					addr = strtol(IFL[5], NULL, 10);
 					strcat(oField, "%06X", addr);		//FIX too many args	
 				}

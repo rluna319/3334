@@ -355,7 +355,7 @@ void loadf(char *prm1)
 	int length, LINEAddr, LINENum;
 	int location = 1;
 	int bytehex = 0;
-	char *byte;
+	char *byte;*
 
 	char LINE[128];
 	fgets(LINE, 128, obj);	//grab object file header
@@ -372,6 +372,13 @@ void loadf(char *prm1)
 	//loop through file
 	while(fgets(LINE, 128, obj)){
 
+		if(LINE[0] == 'E') {
+        	// set PC to first instruction to be executed
+	        PutPC(strtol(substr(LINE, 1, 6), NULL, 16));
+	        break;
+   		}
+
+		
 		length =strlen(LINE)-1;
 		location = 1;
 
