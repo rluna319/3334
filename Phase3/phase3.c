@@ -81,7 +81,7 @@ void ErrorFlags();	//initializes Error definitions
 
 //-----------------------File Declarations--------------------//
 
-FILE *source, *intermediate, *symboltable, *Errors, *obj, *list;
+FILE *source, *intermediate, *symboltable, *obj, *list;
 
 
 //-----------------------Program Functions--------------------//  
@@ -109,7 +109,7 @@ void indexOp(char *);
 //gets substring of a char array (string)
 char* substr(char*, int, int);
 //gets lines from the intermediate file to store into a 2d char array (string array)
-char** getlines();
+void getlines();
 //outputs addresses of the labels (int)
 int SymAddr(char *);
 //converts regular instructions into their corresponding opcodes
@@ -126,9 +126,12 @@ char progName[20];	//name of program
 char line[500];		//stores line in file
 int tcount = 0;		//token counter
 int symI = 0;		//SYMTAB indexer/counter
+char Errors[128];			//stores Error line in Errors to print to intermediate file
 int ErrorCount = 0;	//Error count
+int CEC = 0; 		//Current Error Count [use in Pass1()]
 int SymCount = 0;	//# of Symbols
 char Sname[20];		//stores source file name
+char IFL[8][128] = {0}; // Intermediate File Lines [use in Pass2()]
 char I_fname[20] = "Intermediate.txt";	//Intermediate filename
 char ST_fname[20] = "SymbolTable.txt";	//SymbolTable filename
 
@@ -500,9 +503,14 @@ void debug()
 				break;
 
 			case'c':	//change value of register or contents at specified mem location
-
+				getchar();	//delete \n
+				printf("\n [Options: 'A', 'X', 'L', 'M' <-(Memory Location)]");
 				printf("\n Choose a register or memory location: ");
-				newREG = tolower(getchar());
+				//char in; 
+				char in = getchar();
+				getchar();	//delete \n
+				newREG = tolower(in);
+				//in[strlen(in) - 1] = '\0';
 
 				if (newREG != 'a' && newREG != 'x' && newREG != 'l' && newREG != 'm'){
 					printf("\n Invalid entry...Select one of the following:");
@@ -512,17 +520,18 @@ void debug()
 
 					GetReg(REG);
 					if (newREG == 'a' || newREG == 'x' || newREG == 'l'){
-						printf("[Register %c]\n\n\tInput (6 HEX digits): ", toupper(newREG));
+						printf("[Register %c]\tInput (6 HEX digits): ", toupper(newREG));
 					}
 					else printf("\tSpecify memory location (HEX): ");
 				
 					fgets(hex, 16, stdin);
+					hex[strlen(hex) - 1] = '\0';
 
 					printf("\n");
 
 					switch(newREG){
 						case 'a':	//A register
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for (int i = 0; i < 3; ++i){
 									REG[0][i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
@@ -532,7 +541,7 @@ void debug()
 							break;
 
 						case 'x':	//X register
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for (int i = 0; i < 3; ++i){
 									REG[1][i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
@@ -542,7 +551,7 @@ void debug()
 							break;
 
 						case 'l':	//L register
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for (int i = 0; i < 3; ++i){
 									REG[2][i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
@@ -552,22 +561,22 @@ void debug()
 							break;
 
 						case 'm':	//Memory location
-							
 							memLoc = strtol(substr(hex,0,strcspn(hex, "\0")), NULL, 16);
 							for (int i = 0; i < strcspn(hex, "\0"); i++) hex[i] = '\0';	//clear hex
 
 							printf("[byte -> 2 HEX digits][word -> 6 HEX digits]\n");
 							printf("\n\tInput: ");
 							fgets(hex, 16, stdin);
+							hex[strlen(hex) - 1] = '\0';
 							printf("\n");
 
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for(int i = 0; i < 3; ++i){
 									newWord[i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
 								PutMem(memLoc, newWord, 1);
 							}
-							else if (strcspn(hex, "\0") == 2){
+							else if ((strlen(hex)) == 2){
 								newByte = strtol(substr(hex, 0, strcspn(hex, "\0")), NULL, 16);
 								PutMem(memLoc, newByte, 0);
 							}
@@ -904,7 +913,7 @@ char* substr(char* string, int pos, int length)
 	char sub[100];
 	int c = 0;
 	while (c < length) {
-		sub[c] = string[pos+c-1];
+		sub[c] = string[pos+c];
 		c++;
 	}
 	sub[c] = '\0';
@@ -923,7 +932,8 @@ void T_clear()
 {
 	for (int i = 0; i < 4; i++)
 	{
-		strcpy(token[i].str, "\0");
+		//strcpy(token[i].str, "\0");
+		memset(token[i].str, '\0', strlen(token[i].str));
 		token[i].hastoken = false;
 	}
 }
@@ -978,8 +988,9 @@ void symInsert(char *label, long addr)
 				SYM = 0;	//reset pointer
 			}
 			else {	//error duplicate label ** Error 0
-				fprintf(Errors, "0 ");
+				strcat(Errors, "0 ");
 				ErrorCount++;
+				CEC++;
 				SYM = 0;	//reset pointer
 			}
 		}
@@ -1022,8 +1033,9 @@ void smartLoc()
         return;
     }
     else {  //invalid empty operand ** Error 2
-        fprintf(Errors, "2 ");
+        strcat(Errors, "2A ");
         ErrorCount++;
+        CEC++;
         return;
     }
 
@@ -1031,23 +1043,26 @@ void smartLoc()
 		locctr = operand;
 	}
 	else if (strcmp(token[1].str, "RESB") == 0){
-		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
-			fprintf(Errors, "2 ");
+		if (isdigit(operand) != 0){	//check if operand is int
+			strcat(Errors, "2B ");
 			ErrorCount++;
+			CEC++;
 		}
 		else locctr += operand;
 	}
 	else if (strcmp(token[1].str, "RESW") == 0){
-		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
-			fprintf(Errors, "2 ");
+		if (isdigit(operand) != 0){	//check if operand is int
+			strcat(Errors, "2C ");
 			ErrorCount++;
+			CEC++;
 		}
 		else locctr += (3 * operand);
 	}
 	else if (strcmp(token[1].str, "WORD") == 0){
-		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
-			fprintf(Errors, "2 ");
+		if (isdigit(operand) != 0){	//check if operand is int
+			strcat(Errors, "2D ");
 			ErrorCount++;
+			CEC++;
 		}
 		else locctr += 3;
 	}
@@ -1056,22 +1071,25 @@ void smartLoc()
 
 		//check for single quotes (i.e. X'4F') 
 		if (token[2].str[1] != '\'' || token[2].str[oplen - 1] != '\''){
-			fprintf(Errors, "2 ");
+			strcat(Errors, "2E ");
 			ErrorCount++;
+			CEC++;
 			return;
 		}
 		if (token[2].str[0] == 'C') locctr += digits;
-		if (token[2].str[0] == 'X'){
+		else if (token[2].str[0] == 'X'){
 			if (digits % 2 == 1) {	//error: odd number of digits when using X ** Error 2
-				fprintf(Errors, "2 ");
+				strcat(Errors, "2F ");
 				ErrorCount++;
+				CEC++;
 			 	return;
 			 }	
 			else locctr += digits/2;
 		}
 		else {	//invalid operand ** Error 2
-			fprintf(Errors, "2 ");
+			strcat(Errors, "2G ");
 			ErrorCount++;
+			CEC++;
 		}	
 	}
 	else if (strcmp(token[1].str, "END") == 0){
@@ -1088,8 +1106,9 @@ void indexOp(char *Operand)
 	int comma = strcspn(Operand, ",");
 	if (Operand[oplen - 2] == ','){
 		if (Operand[comma] != 'X'){	//invalid operand if not X ??? does it have to be X???
-			fprintf(Errors, "2 ");
-			ErrorCount++; 
+			strcat(Errors, "2H ");
+			ErrorCount++;
+			CEC++;
 		}
 	}
 	else return;
@@ -1099,12 +1118,7 @@ void Pass1()
 {
 	bool begin = false;				//has start been called?
 	bool stop = false;				//has stop of source file been
-	//int length;						//length of line
 	bool tok1, tok2, tok3, tok4;	//does token exist?
-	//char label[6];					//stores label to input as parameter
-	char ErrorLine[100];			//stores Error line in Errors to print to intermediate file
-	char ErrFile[20] = "Error.tmp";
-
 
 	//clear SymbolTable and 'line[]'
 	S_clear();
@@ -1115,8 +1129,8 @@ void Pass1()
 	while(!feof(source) && !begin)
 	{	
 		//open tmp file to push errors to
-		Errors = fopen(ErrFile, "w");
-		fprintf(Errors, "Errors: ");
+		memset(Errors, '\0', 128);
+		CEC = 0;
 
 		fgets(line, 500, source);	//read in source line
 
@@ -1147,31 +1161,36 @@ void Pass1()
 				symInsert(token[0].str, locctr);
 			}
 			if (!tok2){	//missing operation ** Error 2
-				fprintf(Errors, "2 ");
-				ErrorCount++; 
+				strcat(Errors, "2I ");
+				ErrorCount++;
+				CEC++; 
 			}
 			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
-				fprintf(Errors, "2 ");
+				strcat(Errors, "2J ");
 				ErrorCount++;
+				CEC++;
 			}
 			else if (tok2 && strcmp(token[1].str, "START") == 0)
 			{
 				if(!tok3){ //missing starting address ** Error 4
-					fprintf(Errors, "4 ");
+					strcat(Errors, "4 ");
 					ErrorCount++;
+					CEC++;
 				} 
 			}
 			if (!tok1 && !tok3 && tok2)	//RSUB
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					fprintf(Errors, "1 ");
+					strcat(Errors, "1 ");
 					ErrorCount++;
+					CEC++;
 				}
 			}
 			if (strcmp(token[1].str, "RSUB") == 0 && tok3){ //invalid operation ** Error 1
-				fprintf(Errors, "1 ");
+				strcat(Errors, "1 ");
 				ErrorCount++;
+				CEC++;
 			}
 		}
 
@@ -1181,23 +1200,17 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		//fprintf(intermediate, "Errors: (NOT READY)\n\n");
-	  	fclose(Errors);
-		Errors = fopen(ErrFile, "r");
-		fgets(ErrorLine, 100, Errors);
-		fclose(Errors);
-		Errors = fopen(ErrFile, "w");
-		fprintf(intermediate, "%s", ErrorLine);
-		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		fprintf(intermediate, "Errors: %s", Errors);
+		if (CEC == 0) fprintf(intermediate, "None\n\n");
 		else fprintf(intermediate, "\n\n");
-		fprintf(Errors, "\n");
+		strcat(Errors, "\n");
 	}
 
 	while (!feof(source) && !stop)
 	{
 		//open tmp file to push errors to
-		fprintf(Errors, "Errors: ");
-
+		memset(Errors, '\0', 128);
+		CEC = 0;
 		fgets(line, 500, source);	//read in source line
 
 		//Test print
@@ -1227,8 +1240,9 @@ void Pass1()
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					fprintf(Errors, "1 ");
+					strcat(Errors, "1 ");
 					ErrorCount++;
+					CEC++;
 				}
 			}
 
@@ -1242,6 +1256,7 @@ void Pass1()
 		if (locctr > 32768){	//program too long ** Error
 			fprintf (Errors, "7 ");
 			ErrorCount++;
+			CEC++;
 			break;
 		}
 
@@ -1251,23 +1266,18 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		//fprintf(intermediate, "Errors: (NOT READY)\n\n");
-	  	fclose(Errors);
-		Errors = fopen(ErrFile, "r");
-		fclose(Errors);
-		Errors = fopen(ErrFile, "w");
-		fgets(ErrorLine, 100, Errors);
-		fprintf(intermediate, "%s", ErrorLine);
-		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		fprintf(intermediate, "Errors: %s", Errors);
+		if (CEC == 0) fprintf(intermediate, "None\n\n");
 		else fprintf(intermediate, "\n\n");
-		fprintf(Errors, "\n");
+		strcat(Errors, "\n");
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
 
 	if (strcmp(token[1].str, "END") != 0){		//invalid or missing END directve ** Error 5
-		fprintf(Errors, "5 ");
+		strcat(Errors, "5 ");
 		ErrorCount++;
+		CEC++;
 	}
 
 	//print to symbol table
@@ -1288,22 +1298,20 @@ void Pass1()
 	fclose(source);
 	fclose(intermediate);
 	fclose(symboltable);
-	fclose(Errors);
-	if (remove(ErrFile)) printf("Error removing '%s'\n\n", ErrFile);
 }
 
 void Pass2()
 {
-	printf("Beginning Pass 2...");
+	printf("\nBeginning Pass 2...\n");
 
 	//open intermediate and symbol table files
 	intermediate = fopen(I_fname, "r");
 	symboltable = fopen(ST_fname, "r");
 
 	//make names for the object and listing file
-	int p = strcspn(progName, ".") - 1;
-	char *pNameO = strcat(substr(progName, 0, p), ".obj");
-	char *pNameL = strcat(substr(progName, 0, p), ".list");
+	int p = strcspn(progName, ".");
+	char *pNameO = strcat(substr(progName, 0, p), "_obj.txt");
+	char *pNameL = strcat(substr(progName, 0, p), "_list.txt");
 
 	obj = fopen(pNameO, "w");	//program name with .obj extension (Object file)
 	list = fopen(pNameL, "w");	//program name with .list extension (Listing file)
@@ -1317,7 +1325,6 @@ void Pass2()
 	bool atEnd = false;			// if END has been hit
 	bool atRes = false;			// if RESW/RESB as been hit
 	bool newText = false;		// if new text record is needed
-	char **IFL;					// Intermediate File Lines (string array)
 	bool end;	                
 	bool finishLine = false;
 	int addr = 0;               // the value of the 16-bit address field
@@ -1336,12 +1343,12 @@ void Pass2()
 
 	while(!feof(intermediate))
 	{
-		IFL = getlines();	//file pointer gets incremented 8 times here unless its a comment
+		getlines();	  //IFL gets incremented 8 times here unless its a comment
 		OpConvert(IFL[4]);	//converts non-directive instructions into their opcodes
 		int i = 0;	//used for inner while loop (resets every outter loop iteration)
 
 		if (strcmp(IFL[4], "START") == 0){
-			progStart = (int)IFL[5];
+			progStart = atoi(IFL[5]);
 		}
 
 		fprintf(list, "Errors: \n\n");
@@ -1398,143 +1405,143 @@ void Pass2()
 					fprintf(list, "	|Unkown Error| \n");
 					break;
 			}
+		}
 
-			fprintf(list, "\nObject Code: \n");
+		fprintf(list, "\nObject Code: \n");
+		addr = 0;
+
+		//IFL indicies 3,4,5 represent Label, Instruction, Operand respectively
+		if (ErrorCount == 0){
 			addr = 0;
-
-			//IFL indicies 3,4,5 represent Label, Instruction, Operand respectively
-			if (ErrorCount == 0){
-				addr = 0;
-				if (strcmp(IFL[4], "START")){
-					fprintf(obj, "H%6s", IFL[3]);	//H[program name 6 chars][start address][program length]
-					fprintf(obj, "%6X", progStart);
-					fprintf(obj, "%6X\n", progLen);
-					atRes = false;
+			if (strcmp(IFL[4], "START")){
+				fprintf(obj, "H%6s", IFL[3]);	//H[program name 6 chars][start address][program length]
+				fprintf(obj, "%6X", progStart);
+				fprintf(obj, "%6X\n", progLen);
+				atRes = false;
+			}
+			else if(strcmp(IFL[4], "RESB") == 0 || strcmp(IFL[4], "RESW") == 0){
+				fieldLen = 0;
+				if(!atRes){
+					newText = true;
+					finishLine = true;
 				}
-				else if(strcmp(IFL[4], "RESB") == 0 || strcmp(IFL[4], "RESW") == 0){
-					fieldLen = 0;
-					if(!atRes){
-						newText = true;
-						finishLine = true;
+				atRes = true;
+			}
+			else if (IFL[4] == "BYTE"){
+				atRes = false;
+				if (IFL[5][0] == 'C'){
+					fieldLen = (strlen(IFL[5]) - 3)*2;
+					//get the 2 nums between the '' i.e.--> C'23' 
+					for(int i = 2; i != strlen(IFL[5]) - 1; ++i){
+						char oprnd[2];
+						sprintf(*oprnd, "%02X", atoi(IFL[5][i]));
+						strcat(oField, oprnd);				//WATCH (this is in chars)
 					}
-					atRes = true;
 				}
-				else if (IFL[4] == "BYTE"){
-					atRes = false;
-					if (IFL[5][0] == 'C'){
-						fieldLen = (strlen(IFL[5]) - 3)*2;
-						//get the 2 nums between the '' i.e.--> C'23' 
-						for(int i = 2; i != strlen(IFL[5]) - 1; ++i){
-							char oprnd[2];
-							sprintf(*oprnd, "%02X", (int)IFL[5][i]);
-							strcat(oField, oprnd);				//WATCH (this is in chars)
+				else{
+					fieldLen = strlen(IFL[5]) - 3;
+					strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH (this is already in hex)
+				}
+			}
+			else if (IFL[4] == "WORD"){
+				atRes = false;
+				fieldLen = 6; 	//one word is 6 hex digits
+				char oprnd[6];
+				sprintf(*oprnd, "%06X", atoi(IFL[5]));
+				addr = strtol(oprnd, NULL, 10);	//watch (base 10 or 16 idk)
+				strcat(oField, addr);		//WATCH
+			}
+			else if (IFL[4] == "END") {
+				atRes = false;
+				atEnd = true;
+				fieldLen = 0;
+				printf("\n**HITS LINE 1446**\n");
+			}
+			else {	//regular instruction
+				atRes = false;
+				fieldLen = 6;
+				bool indx = false;
+				if (IFL[4] != "4C"){
+					if(strlen(IFL[5])>1){
+						int x = strlen(IFL[5]) - 2;
+						char *O = substr(IFL[5], x, 2);
+						if(strcmp(O, ",X")){
+							free(O);
+							addr = indexBit;
+							O = substr(IFL[5],0,x);
+							addr += SymAddr(O);		//returns -2 if address not found
 						}
+
+						addr += SymAddr(IFL[5]);
+
+						if (addr == -1) addr = 0;
 					}
-					else{
-						fieldLen = strlen(IFL[5]) - 3;
-						strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH (this is already in hex)
-					}
+					char oprnd[4];
+					sprintf(*oprnd, "%04X", atoi(IFL[4]));
+					strcat(oField, oprnd);		//WATCH
 				}
-				else if (IFL[4] == "WORD"){
-					atRes = false;
-					fieldLen = 6; 	//one word is 6 hex digits
-					char oprnd[6];
-					sprintf(*oprnd, "%06X", (int)IFL[5]);
-					addr = strtol(oprnd, NULL, 10);	//watch (base 10 or 16 idk)
-					strcat(oField, addr);		//WATCH
-				}
-				else if (IFL[4] == "END") {
-					atRes = false;
-					atEnd = true;
-					fieldLen = 0;
-				}
-				else {	//regular instruction
-					atRes = false;
-					fieldLen = 6;
-					bool indx = false;
-					if (IFL[4] != "4C"){
-						if(strlen(IFL[5])>1){
-							int x = strlen(IFL[5]) - 2;
-							char *O = substr(IFL[5], x, 2);
-							if(strcmp(O, ",X")){
-								free(O);
-								addr = indexBit;
-								O = substr(IFL[5],0,x);
-								addr += SymAddr(O);		//returns -2 if address not found
-							}
-
-							addr += SymAddr(IFL[5]);
-
-							if (addr == -1) addr = 0;
-						}
-						char oprnd[4];
-						sprintf(*oprnd, "%04X", (int)IFL[4]);
-						strcat(oField, oprnd);		//WATCH
-					}
-				}
-
-				if((objLen + fieldLen) > 60 || atEnd || (atRes && finishLine)){
-					if (atRes) finishLine = false;
-					if (atEnd){
-						objLen += fieldLen;
-
-						char OBJ[strlen(ObjCode) + 2];
-						sprintf(*OBJ, "%02X%s", (objLen/2), ObjCode);
-						strcat(T_Record, OBJ);		//WATCH
-						
-						fprintf(obj, "%s\n", T_Record);						
-
-						objLen = 0;
-					}
-				}
-
-				if ((objLen == 0 || newText) && !atRes){
-					memset(ObjCode, '\0', 128);
-					memset(T_Record, '\0', 128);
-					sprintf(T_Record, "T%06X", (int)IFL[2]);		//IFL[2] = location counter
-					newText = false;
-				}
-
-				int X = 0;
-				if (fieldLen > strlen(oField)){
-					X = fieldLen - strlen(oField);
-				}
-				char fill[X];
-				memset(fill, '0', X);
-				char Oprint[fieldLen];
-				sprintf(*Oprint, "%s%X", fill, (int)oField);
-				strcat(ObjCode, Oprint);									//WATCH
-				objLen += fieldLen;
-
-				fprintf(list, "%s%s", fill, oField);
-
-				memset(oField, '\0', 128);
 			}
 
-			fprintf(list, "\tLoad Address: %X", (int)IFL[2]);
+			if((objLen + fieldLen) > 60 || atEnd || (atRes && finishLine)){
+				if (atRes) finishLine = false;
+				if (atEnd){
+					objLen += fieldLen;
 
+					char OBJ[strlen(ObjCode) + 2];
+					sprintf(*OBJ, "%02X%s", (objLen/2), ObjCode);
+					strcat(T_Record, OBJ);		//WATCH
+					
+					fprintf(obj, "%s\n", T_Record);						
+
+					objLen = 0;
+				}
+			}
+
+			if ((objLen == 0 || newText) && !atRes){
+				memset(ObjCode, '\0', 128);
+				memset(T_Record, '\0', 128);
+				sprintf(T_Record, "T%06X", atoi(IFL[2]));		//IFL[2] = location counter
+				newText = false;
+			}
+
+			int X = 0;
+			if (fieldLen > strlen(oField)){
+				X = fieldLen - strlen(oField);
+			}
+			char fill[X];
+			memset(fill, '0', X);
+			char Oprint[fieldLen];
+			sprintf(Oprint, "%s%X", fill, atoi(oField));
+			strcat(ObjCode, Oprint);									//WATCH
+			objLen += fieldLen;
+
+			fprintf(list, "%s%s", fill, oField);
+
+			memset(oField, '\0', 128);
 		}
-		
-		fprintf(list, "\n");
+
+		fprintf(list, "\n\tLoad Address: %X\n", atoi(IFL[2]));
+
+		//fprintf(list, "\n");
 	}
 
 	bool missingAddr = false;
 
 	fprintf(list, "\n");
 
-	for(int i = 0; i < 500; i++)
+	for(int i = 0; i < 500; i++){
 		if (SYMTAB[i].address == -2){
 			if(SYMTAB[i].address == -1){
 				missingAddr = true;
 				fprintf(list, "!Label Undefined: %s\n", SYMTAB[i].label);
 			}
 		}
-
+	}
 
 	fclose(list);
 	//inf.close();
 
-	printf("Pass 2 complete...\n");
+	printf("\nPass 2 complete...\n");
 
 	if(atEnd && ErrorCount == 0) {
 		fprintf(obj, "E%06X", progStart	);
@@ -1545,57 +1552,64 @@ void Pass2()
 	else {
 		fclose(obj);
 		remove(pNameO);
-		printf("!!!	Errors prevented object file creation...\n");
-		printf("\t--view %s for a detailed report\n\n", pNameL);
+		printf("\n!!!	Errors prevented object file creation...\n");
+		printf("\tView %s for the report.\n\n", pNameL);
 	}
 }
 
-char** getlines()
+void getlines()
 {		
-		char ifl[8][128];
 		char tstr[128];		//tmp string
 		memset(tstr, '\0', 128);
 
 		//line 1
 		fgets(tstr, 128, intermediate);
-		strcpy(ifl[0], substr(tstr, 13, strlen(tstr)));
+		strcpy(IFL[0], substr(tstr, 13, strlen(tstr)));
+		IFL[0][strlen(IFL[0]) - 1] = '\0'; 
 		memset(tstr, '\0', 128);
 
 		//when reaching a comment the first line is either a space or '.'
 		//skip it
-		while(ifl[0][0] == ' ' || ifl[0][0] == '.'){
+		while(IFL[0][0] == ' ' || IFL[0][0] == '.'){
 			fgets(tstr, 128, intermediate);
-			strcpy(ifl[0], substr(tstr, 13, strlen(tstr)));
+			strcpy(IFL[0], substr(tstr, 13, strlen(tstr)));
+			IFL[0][strlen(IFL[0]) - 1] = '\0'; 
 			memset(tstr, '\0', 128);
 		}
 
 		//line 2 (blank)
-		ifl[1][0] = '\0';
+		fgets(tstr, 128, intermediate);
+		IFL[1][0] = '\0';
+		memset(tstr, '\0', 128);
 		//line 3
 		fgets(tstr, 128, intermediate);
-		strcpy(ifl[2], substr(tstr, 18, strlen(tstr)));
+		strcpy(IFL[2], substr(tstr, 18, strlen(tstr)));
+		IFL[2][strlen(IFL[2]) - 1] = '\0'; 
 		memset(tstr, '\0', 128);
 		//line 4
 		fgets(tstr, 128, intermediate);
-		strcpy(ifl[3], substr(tstr, 7, strlen(tstr)));
+		strcpy(IFL[3], substr(tstr, 7, strlen(tstr)));
+		IFL[3][strlen(IFL[3]) - 1] = '\0'; 
 		memset(tstr, '\0', 128);
 		//line 5
 		fgets(tstr, 128, intermediate);
-		strcpy(ifl[4], substr(tstr, 11, strlen(tstr)));
+		strcpy(IFL[4], substr(tstr, 11, strlen(tstr)));
+		IFL[4][strlen(IFL[4]) - 1] = '\0'; 
 		memset(tstr, '\0', 128);
 		//line 6
 		fgets(tstr, 128, intermediate);
-		strcpy(ifl[5], substr(tstr, 9, strlen(tstr)));
+		strcpy(IFL[5], substr(tstr, 9, strlen(tstr) - 1));
+		IFL[5][strlen(IFL[5]) - 1] = '\0'; 
 		memset(tstr, '\0', 128);
 		//line 7
 		fgets(tstr, 128, intermediate);
-		strcpy(ifl[6], substr(tstr, 8, strlen(tstr)));
+		strcpy(IFL[6], substr(tstr, 8, strlen(tstr)));
+		IFL[6][strlen(IFL[6]) - 1] = '\0'; 
 		memset(tstr, '\0', 128);
 
-		ifl[7][0] = '\0';
-
-		//char **IFL = &ifl;
-		return **ifl;
+		fgets(tstr, 128, intermediate);
+		IFL[7][0] = '\0';		
+		memset(tstr, '\0', 128);
 
 }
 
