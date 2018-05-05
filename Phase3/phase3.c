@@ -109,7 +109,7 @@ void indexOp(char *);
 //gets substring of a char array (string)
 char* substr(char*, int, int);
 //gets lines from the intermediate file to store into a 2d char array (string array)
-void getlines(char **);
+char** getlines();
 //outputs addresses of the labels (int)
 int SymAddr(char *);
 //converts regular instructions into their corresponding opcodes
@@ -1289,7 +1289,7 @@ void Pass1()
 	fclose(intermediate);
 	fclose(symboltable);
 	fclose(Errors);
-	remove("Error.txt");
+	if (remove(ErrFile)) printf("Error removing '%s'\n\n", ErrFile);
 }
 
 void Pass2()
@@ -1301,7 +1301,7 @@ void Pass2()
 	symboltable = fopen(ST_fname, "r");
 
 	//make names for the object and listing file
-	int p = strscpn(progName, ".") - 1;
+	int p = strcspn(progName, ".") - 1;
 	char *pNameO = strcat(substr(progName, 0, p), ".obj");
 	char *pNameL = strcat(substr(progName, 0, p), ".list");
 
@@ -1317,7 +1317,7 @@ void Pass2()
 	bool atEnd = false;			// if END has been hit
 	bool atRes = false;			// if RESW/RESB as been hit
 	bool newText = false;		// if new text record is needed
-	char **IFL = NULL;					// Intermediate File Lines (string array)
+	char **IFL;					// Intermediate File Lines (string array)
 	bool end;	                
 	bool finishLine = false;
 	int addr = 0;               // the value of the 16-bit address field
@@ -1336,7 +1336,7 @@ void Pass2()
 
 	while(!feof(intermediate))
 	{
-		getlines(IFL);	//file pointer gets incremented 8 times here unless its a comment
+		IFL = getlines();	//file pointer gets incremented 8 times here unless its a comment
 		OpConvert(IFL[4]);	//converts non-directive instructions into their opcodes
 		int i = 0;	//used for inner while loop (resets every outter loop iteration)
 
@@ -1425,25 +1425,25 @@ void Pass2()
 						fieldLen = (strlen(IFL[5]) - 3)*2;
 						//get the 2 nums between the '' i.e.--> C'23' 
 						for(int i = 2; i != strlen(IFL[5]) - 1; ++i){
-
-							strcat(oField, IFL[5][i]);				//WATCH
+							char oprnd[2];
+							sprintf(*oprnd, "%02X", (int)IFL[5][i]);
+							strcat(oField, oprnd);				//WATCH (this is in chars)
 						}
 					}
 					else{
 						fieldLen = strlen(IFL[5]) - 3;
-
-						strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH
+						strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH (this is already in hex)
 					}
 				}
 				else if (IFL[4] == "WORD"){
 					atRes = false;
 					fieldLen = 6; 	//one word is 6 hex digits
-					int X = 0;
-					if (strlen(IFL[5] < 6)) X = 6 - strlen(IFL[5]);
-					addr = strtol(IFL[5], NULL, 10);
-					strcat(oField, "%06X", addr);		//FIX too many args	
+					char oprnd[6];
+					sprintf(*oprnd, "%06X", (int)IFL[5]);
+					addr = strtol(oprnd, NULL, 10);	//watch (base 10 or 16 idk)
+					strcat(oField, addr);		//WATCH
 				}
-				else if (EFL[4] == "END") {
+				else if (IFL[4] == "END") {
 					atRes = false;
 					atEnd = true;
 					fieldLen = 0;
@@ -1455,7 +1455,7 @@ void Pass2()
 					if (IFL[4] != "4C"){
 						if(strlen(IFL[5])>1){
 							int x = strlen(IFL[5]) - 2;
-							char *O = substr(IFL[5], *x, 2);
+							char *O = substr(IFL[5], x, 2);
 							if(strcmp(O, ",X")){
 								free(O);
 								addr = indexBit;
@@ -1467,8 +1467,9 @@ void Pass2()
 
 							if (addr == -1) addr = 0;
 						}
-						
-						strcat(oField, "%04X", IFL[4]);		//FIX too many args
+						char oprnd[4];
+						sprintf(*oprnd, "%04X", (int)IFL[4]);
+						strcat(oField, oprnd);		//WATCH
 					}
 				}
 
@@ -1477,17 +1478,20 @@ void Pass2()
 					if (atEnd){
 						objLen += fieldLen;
 
-						strcat(T_Record, "%02X%s",(objLen/2), objCode);		//FIX too many args
-						fprintf(obj, "%s", T_Record);						
+						char OBJ[strlen(ObjCode) + 2];
+						sprintf(*OBJ, "%02X%s", (objLen/2), ObjCode);
+						strcat(T_Record, OBJ);		//WATCH
+						
+						fprintf(obj, "%s\n", T_Record);						
 
 						objLen = 0;
 					}
 				}
 
 				if ((objLen == 0 || newText) && !atRes){
-					memset(objCode, '\0', 128);
+					memset(ObjCode, '\0', 128);
 					memset(T_Record, '\0', 128);
-					strcpy(T_Record, "T%06X", loadAddr);		//FIX  [look for loadAddr (undeclaration err)]
+					sprintf(T_Record, "T%06X", (int)IFL[2]);		//IFL[2] = location counter
 					newText = false;
 				}
 
@@ -1497,7 +1501,9 @@ void Pass2()
 				}
 				char fill[X];
 				memset(fill, '0', X);
-				strcat(objCode, "%s%X", fill, oField);		//FIX too many args
+				char Oprint[fieldLen];
+				sprintf(*Oprint, "%s%X", fill, (int)oField);
+				strcat(ObjCode, Oprint);									//WATCH
 				objLen += fieldLen;
 
 				fprintf(list, "%s%s", fill, oField);
@@ -1505,16 +1511,16 @@ void Pass2()
 				memset(oField, '\0', 128);
 			}
 
-			fprintf(list, "\tLoad Address: %X", loadAddr);
+			fprintf(list, "\tLoad Address: %X", (int)IFL[2]);
 
 		}
 		
-		fprintf(list, '\n');
+		fprintf(list, "\n");
 	}
 
 	bool missingAddr = false;
 
-	fprintf(list, '\n');
+	fprintf(list, "\n");
 
 	for(int i = 0; i < 500; i++)
 		if (SYMTAB[i].address == -2){
@@ -1544,47 +1550,53 @@ void Pass2()
 	}
 }
 
-void getlines(char** ifl)
-{
-		char* tstr;		//tmp string
+char** getlines()
+{		
+		char ifl[8][128];
+		char tstr[128];		//tmp string
+		memset(tstr, '\0', 128);
 
 		//line 1
 		fgets(tstr, 128, intermediate);
-		ifl[0] = substr(tstr, 13, strlen(tstr));
-		free(tstr);
+		strcpy(ifl[0], substr(tstr, 13, strlen(tstr)));
+		memset(tstr, '\0', 128);
 
 		//when reaching a comment the first line is either a space or '.'
 		//skip it
 		while(ifl[0][0] == ' ' || ifl[0][0] == '.'){
 			fgets(tstr, 128, intermediate);
-			ifl[0] = substr(tstr, 13, strlen(tstr));
-			free(tstr);
+			strcpy(ifl[0], substr(tstr, 13, strlen(tstr)));
+			memset(tstr, '\0', 128);
 		}
 
 		//line 2 (blank)
 		ifl[1][0] = '\0';
 		//line 3
 		fgets(tstr, 128, intermediate);
-		ifl[2] = substr(tstr, 18, strlen(tstr));
-		free(tstr);
+		strcpy(ifl[2], substr(tstr, 18, strlen(tstr)));
+		memset(tstr, '\0', 128);
 		//line 4
 		fgets(tstr, 128, intermediate);
-		ifl[3] = substr(tstr, 7, strlen(tstr));
-		free(tstr);
+		strcpy(ifl[3], substr(tstr, 7, strlen(tstr)));
+		memset(tstr, '\0', 128);
 		//line 5
 		fgets(tstr, 128, intermediate);
-		ifl[4] = substr(tstr, 11, strlen(tstr));
-		free(tstr);
+		strcpy(ifl[4], substr(tstr, 11, strlen(tstr)));
+		memset(tstr, '\0', 128);
 		//line 6
 		fgets(tstr, 128, intermediate);
-		ifl[5] = substr(tstr, 9, strlen(tstr));
-		free(tstr);
+		strcpy(ifl[5], substr(tstr, 9, strlen(tstr)));
+		memset(tstr, '\0', 128);
 		//line 7
 		fgets(tstr, 128, intermediate);
-		ifl[6] = substr(tstr, 8, strlen(tstr));
-		free(tstr);
+		strcpy(ifl[6], substr(tstr, 8, strlen(tstr)));
+		memset(tstr, '\0', 128);
 
 		ifl[7][0] = '\0';
+
+		//char **IFL = &ifl;
+		return **ifl;
+
 }
 
 int SymAddr(char *LABEL)	//returns -2 if address is not found
@@ -1593,7 +1605,7 @@ int SymAddr(char *LABEL)	//returns -2 if address is not found
 
 	//loop through and check if label exists
 	for (int i = 0; i < 500; i++){ 
-		if (strcmp(label, SYMTAB[i].label) == 0){
+		if (strcmp(LABEL, SYMTAB[i].label) == 0){
 			return SYMTAB[i].address;
 		}
 	}
@@ -1609,7 +1621,7 @@ void OpConvert(char *OP)
 
 			if (i > 24){return;} //OPTAB[25->30] are directives so do nothing
 			else { //change OP to it's corresponding opcode
-				strcpy(OP, "%02X", OPTAB[i].opcode);							//FIX too many args
+				sprintf(OP, "%02X", OPTAB[i].opcode);							//WATCH
 				return;
 			}
 		}
@@ -1617,3 +1629,4 @@ void OpConvert(char *OP)
 
 	strcpy(OP, "!ERR!");	//if OPCODE is not found OP = !ERR!
 }
+
