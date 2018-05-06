@@ -1413,7 +1413,7 @@ void Pass2()
 		//IFL indicies 3,4,5 represent Label, Instruction, Operand respectively
 		if (ErrorCount == 0){
 			addr = 0;
-			if (strcmp(IFL[4], "START")){
+			if (strcmp(IFL[4], "START") == 0){
 				fprintf(obj, "H%6s", IFL[3]);	//H[program name 6 chars][start address][program length]
 				fprintf(obj, "%6X", progStart);
 				fprintf(obj, "%6X\n", progLen);
@@ -1427,35 +1427,43 @@ void Pass2()
 				}
 				atRes = true;
 			}
-			else if (IFL[4] == "BYTE"){
+			else if (strcmp(IFL[4], "BYTE") == 0){
 				atRes = false;
 				if (IFL[5][0] == 'C'){
 					fieldLen = (strlen(IFL[5]) - 3)*2;
-					//get the 2 nums between the '' i.e.--> C'23' 
-					for(int i = 2; i != strlen(IFL[5]) - 1; ++i){
-						char oprnd[2];
-						sprintf(*oprnd, "%02X", atoi(IFL[5][i]));
-						strcat(oField, oprnd);				//WATCH (this is in chars)
+					//get the nums between the '' i.e.--> C'23'
+					int x = 0;
+					x = strlen(IFL[5]) - 3;
+
+					char OPP[x];
+					memset(OPP, '\0', x);
+					strcpy(OPP, substr(IFL[5], 2, x));
+
+					char oprnd[x*2];
+
+					for (int i = 0; i < strlen(OPP); i++){
+						sprintf(oprnd+i*2, "%02X", OPP[i]);
 					}
+					
+					strcat(oField, oprnd);
 				}
 				else{
 					fieldLen = strlen(IFL[5]) - 3;
 					strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH (this is already in hex)
 				}
 			}
-			else if (IFL[4] == "WORD"){
+			else if (strcmp(IFL[4], "WORD") == 0){
 				atRes = false;
 				fieldLen = 6; 	//one word is 6 hex digits
+				addr = strtol(IFL[5], NULL, 10);
 				char oprnd[6];
-				sprintf(*oprnd, "%06X", atoi(IFL[5]));
-				addr = strtol(oprnd, NULL, 10);	//watch (base 10 or 16 idk)
-				strcat(oField, addr);		//WATCH
+				sprintf(oprnd, "%06X", addr);
+				strcat(oField, oprnd);		//WATCH
 			}
-			else if (IFL[4] == "END") {
+			else if (strcmp(IFL[4], "END") == 0) {
 				atRes = false;
 				atEnd = true;
 				fieldLen = 0;
-				printf("\n**HITS LINE 1446**\n");
 			}
 			else {	//regular instruction
 				atRes = false;
@@ -1464,10 +1472,11 @@ void Pass2()
 				if (IFL[4] != "4C"){
 					if(strlen(IFL[5])>1){
 						int x = strlen(IFL[5]) - 2;
-						char *O = substr(IFL[5], x, 2);
-						if(strcmp(O, ",X")){
-							free(O);
+						//char *O = substr(IFL[5], x, 2);
+						if(strcmp(substr(IFL[5], x, 2), ",X") == 0){
+							//free(O);
 							addr = indexBit;
+							char *O = malloc(sizeof(char)*x);
 							O = substr(IFL[5],0,x);
 							addr += SymAddr(O);		//returns -2 if address not found
 						}
@@ -1477,7 +1486,7 @@ void Pass2()
 						if (addr == -1) addr = 0;
 					}
 					char oprnd[4];
-					sprintf(*oprnd, "%04X", atoi(IFL[4]));
+					sprintf(oprnd, "%04X", addr);
 					strcat(oField, oprnd);		//WATCH
 				}
 			}
@@ -1554,6 +1563,7 @@ void Pass2()
 		remove(pNameO);
 		printf("\n!!!	Errors prevented object file creation...\n");
 		printf("\tView %s for the report.\n\n", pNameL);
+		printf("\tPASS 2 IS BROKEN...I TRIED...*SIGH*...\n\n");
 	}
 }
 
