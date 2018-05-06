@@ -26,7 +26,7 @@ are the names of files being generated...
 
 //-----------------------SIC Commands--------------------------//
 
-void loadf (prm1);
+void loadf (char *);
 void execute ();
 void debug ();
 void dump (char *, char *);
@@ -355,7 +355,7 @@ void loadf(char *prm1)
 	int length, LINEAddr, LINENum;
 	int location = 1;
 	int bytehex = 0;
-	char *byte;*
+	char *byte;
 
 	char LINE[128];
 	fgets(LINE, 128, obj);	//grab object file header
@@ -371,15 +371,8 @@ void loadf(char *prm1)
 
 	//loop through file
 	while(fgets(LINE, 128, obj)){
-
-		if(LINE[0] == 'E') {
-        	// set PC to first instruction to be executed
-	        PutPC(strtol(substr(LINE, 1, 6), NULL, 16));
-	        break;
-   		}
-
 		
-		length =strlen(LINE)-1;
+		length = strlen(LINE) - 1;
 		location = 1;
 
 		if (LINE[0] == 'E' && strcspn(LINE, "\0") != 7){
@@ -387,14 +380,9 @@ void loadf(char *prm1)
 			return;
 		}
 		else if (LINE[0] == 'E'){
-			char end[6];
-			for(int i = 1; i<=6; i++){
-				end[i-1]=LINE[i];
-			}
-			sscanf(end, "%06X", &progStart);
-			ADDRESS pStart = progStart;
-			PutPC(pStart);
-			break;
+		// set PC to first instruction to be executed
+	        PutPC(strtol(substr(LINE, 2, 6), NULL, 16));
+	        break;
 		}
 
 		//start LINE address
@@ -482,24 +470,28 @@ void debug()
 				GetReg(REG);
 				printf("\n\tA: ");
 				for(int i = 0; i < 3; ++i){
-					printf("%02X  ", (unsigned long)REG[0][i]);
+					printf("%02lX  ", (unsigned long)REG[0][i]);
 				}
 				printf("\n\tX: ");
 				for(int i = 0; i < 3; ++i){
-					printf("%02X  ", (unsigned long)REG[1][i]);
+					printf("%02lX  ", (unsigned long)REG[1][i]);
 				}
 				printf("\n\tL: ");
 				for(int i = 0; i < 3; ++i){
-					printf("%02X  ", (unsigned long)REG[2][i]);
+					printf("%02lX  ", (unsigned long)REG[2][i]);
 				}
-				printf("\n\tPC: %02X", (unsigned long)GetPC());
+				printf("\n\tPC: %02lX", (unsigned long)GetPC());
 				printf("\n\tSW: %c\n", GetCC());
 				break;
 
 			case'c':	//change value of register or contents at specified mem location
 
+				getchar();	//delete \n
+				printf("\n [Options: 'A', 'X', 'L', 'M' <-(Memory Location)]");
 				printf("\n Choose a register or memory location: ");
-				newREG = tolower(getchar());
+				char in = getchar();
+				getchar();	//delete \n
+				newREG = tolower(in);
 
 				if (newREG != 'a' && newREG != 'x' && newREG != 'l' && newREG != 'm'){
 					printf("\n Invalid entry...Select one of the following:");
@@ -509,17 +501,18 @@ void debug()
 
 					GetReg(REG);
 					if (newREG == 'a' || newREG == 'x' || newREG == 'l'){
-						printf("[Register %c]\n\n\tInput (6 HEX digits): ", toupper(newREG));
+						printf("[Register %c]\tInput (6 HEX digits): ", toupper(newREG));
 					}
-					else printf("\tSpecify memory location (HEX): ");
+					else printf(" Specify memory location (HEX): ");
 				
 					fgets(hex, 16, stdin);
+					hex[strlen(hex) - 1] = '\0';
 
 					printf("\n");
 
 					switch(newREG){
 						case 'a':	//A register
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for (int i = 0; i < 3; ++i){
 									REG[0][i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
@@ -529,7 +522,7 @@ void debug()
 							break;
 
 						case 'x':	//X register
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for (int i = 0; i < 3; ++i){
 									REG[1][i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
@@ -539,7 +532,7 @@ void debug()
 							break;
 
 						case 'l':	//L register
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for (int i = 0; i < 3; ++i){
 									REG[2][i] = strtol(substr(hex, i*2, 2), NULL, 16);
 								}
@@ -549,24 +542,24 @@ void debug()
 							break;
 
 						case 'm':	//Memory location
-							
-							memLoc = strtol(substr(hex,0,strcspn(hex, "\0")), NULL, 16);
+							memLoc = strtol(substr(hex,1,strcspn(hex, "\0")), NULL, 16);
 							for (int i = 0; i < strcspn(hex, "\0"); i++) hex[i] = '\0';	//clear hex
 
-							printf("[byte -> 2 HEX digits][word -> 6 HEX digits]\n");
-							printf("\n\tInput: ");
+							printf("\n\t[byte -> 2 HEX digits][word -> 6 HEX digits]\n");
+							printf("\n Input: ");
 							fgets(hex, 16, stdin);
+							hex[strlen(hex) - 1] = '\0';
 							printf("\n");
 
-							if (strcspn(hex, "\0") == 6){
+							if ((strlen(hex)) == 6){
 								for(int i = 0; i < 3; ++i){
-									newWord[i] = strtol(substr(hex, i*2, 2), NULL, 16);
+									newWord[i] = strtol(substr(hex, i*2 + 1, 2), NULL, 16);
 								}
 								PutMem(memLoc, newWord, 1);
 							}
-							else if (strcspn(hex, "\0") == 2){
+							else if ((strlen(hex)) == 2){
 								newByte = strtol(substr(hex, 0, strcspn(hex, "\0")), NULL, 16);
-								PutMem(memLoc, newByte, 0);
+								PutMem(memLoc, &newByte, 0);
 							}
 							else printf("\tInvalid input...\n");
 							break;
@@ -580,6 +573,7 @@ void debug()
 				}//end else
 
 					break;
+
 
 			case 's': 
 
@@ -635,7 +629,7 @@ void dump (char *prm1, char *prm2)
 		}
 	
 
-		printf("%04X: ", startAddr);
+		printf("%04lX: ", startAddr);
 		for (int i = 0; i < 16; ++i){
 			GetMem(startAddr + i, &value, 0);
 			printf("%02X  ", (int)value);		//%02x 0 fill(padding) with 2 digits of precision in hex
