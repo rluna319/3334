@@ -1,64 +1,380 @@
-Source line: COPY    START   1000		COPY FILE FROM INPUT TO OUTPUT
+Source line: COPY            1000		COPY FILE FROM INPUT TO OUTPUT (Error)
 
-Location counter: 1000
+Location counter: 3
 Label: COPY
-Operation: START
-Operand: 1000
-Errors: None
+Operation: 1000
+Operand: COPY
+Errors: 2 
 
-Source line: FIRST   STL     RETADR		SAVE RETURN ADDRESS
 
-Location counter: 1003
-Label: FIRST
+
+Source line: 	STL     RETADR		SAVE RETURN ADDRESS
+
+Location counter: 6
+Label: 
 Operation: STL
 Operand: RETADR
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000None
+Errors: None
 
 Source line: CLOOP   JSUB    RDREC		READ INPUT RECORD
 
-Location counter: 1006
+Location counter: 9
 Label: CLOOP
 Operation: JSUB
 Operand: RDREC
-None
+Errors: None
 
 Source line: 	LDA	LENGTH		TEST FOR EOF (LENGTH = 0)
 
-Location counter: 1009
+Location counter: 12
 Label: 
 Operation: LDA
 Operand: LENGTH
-None
+Errors: None
 
 Source line: 	COMP    ZERO
 
-Location counter: 1012
+Location counter: 15
 Label: 
 Operation: COMP
 Operand: ZERO
-None
+Errors: None
 
 Source line: 	JEQ     ENDFIL		EXIT IF EOF FOUND
 
-Location counter: 1015
+Location counter: 18
 Label: 
 Operation: JEQ
 Operand: ENDFIL
-None
+Errors: None
 
 Source line: 	JSUB	WRREC		WRITE OUTPUT RECORD
 
-Location counter: 1018
+Location counter: 21
 Label: 
 Operation: JSUB
 Operand: WRREC
-None
+Errors: None
 
-Source line: 	J       CLOOP		LOOP
+Source line: 	J            		LOOP (Error)
 
-Location counter: 1021
+Location counter: 24
 Label: 
 Operation: J
-Operand: CLOOP
-None
+Operand: LOOP
+Errors: None
+
+Source line: ENDFIL  LDA     EOF		INSERT END OF FILE MARKER
+
+Location counter: 27
+Label: ENDFIL
+Operation: LDA
+Operand: EOF
+Errors: None
+
+Source line: 	STA     BUFFER
+
+Location counter: 30
+Label: 
+Operation: STA
+Operand: BUFFER
+Errors: None
+
+Source line: 	LDA     THREE		SET LENGTH = 3
+
+Location counter: 33
+Label: 
+Operation: LDA
+Operand: THREE
+Errors: None
+
+Source line: 	STA     LENGTH
+
+Location counter: 36
+Label: 
+Operation: STA
+Operand: LENGTH
+Errors: None
+
+Source line: 	JSUB    WRREC		WRITE EOF
+
+Location counter: 39
+Label: 
+Operation: JSUB
+Operand: WRREC
+Errors: None
+
+Source line: 	LDD     RETADR		GET RETURN ADDRESS (Error)
+
+Location counter: 42
+Label: 
+Operation: LDD
+Operand: RETADR
+Errors: None
+
+Source line: 	RSUB             	RETURN TO CALLER
+
+Location counter: 45
+Label: 
+Operation: RSUB
+Operand: RETURN
+Errors: None
+
+Source line: EOF     BYTE    C'EOF'
+
+Location counter: 48
+Label: EOF
+Operation: BYTE
+Operand: C'EOF'
+Errors: None
+
+Source line: THREE   WORD    3
+
+Location counter: 48
+Label: THREE
+Operation: WORD
+Operand: 3
+Errors: None
+
+Source line: ZERO    WORD    0
+
+Location counter: 48
+Label: ZERO
+Operation: WORD
+Operand: 0
+Errors: None
+
+Source line: RETADR  RESW    1
+
+Location counter: 48
+Label: RETADR
+Operation: RESW
+Operand: 1
+Errors: None
+
+Source line: LENGTH  RESW    1		LENGTH OF RECORD
+
+Location counter: 48
+Label: LENGTH
+Operation: RESW
+Operand: 1
+Errors: None
+
+Source line: BUFFER  RESB    4096		4096-BYTE BUFFER AREA
+
+Location counter: 48
+Label: BUFFER
+Operation: RESB
+Operand: 4096
+Errors: None
+
+.
+
+
+.	SUBROUTINE TO READ RECORD INTO BUFFER
+
+
+.
+
+
+Source line: RDREC   LDX     ZERO		CLEAR LOOP COUNTER
+
+Location counter: 51
+Label: RDREC
+Operation: LDX
+Operand: ZERO
+Errors: None
+
+Source line: 	LDA     ZERO		CLEAR A TO ZERO
+
+Location counter: 54
+Label: 
+Operation: LDA
+Operand: ZERO
+Errors: None
+
+Source line: RLOOP   TD      INPUT		TEST INPUT DEVICE
+
+Location counter: 57
+Label: RLOOP
+Operation: TD
+Operand: INPUT
+Errors: None
+
+Source line: 	JEQ     RLOOP		LOOP UNTIL READY
+
+Location counter: 60
+Label: 
+Operation: JEQ
+Operand: RLOOP
+Errors: None
+
+Source line: 	RD      INPUT		READ CHARACTER INTO REGISTAR A
+
+Location counter: 63
+Label: 
+Operation: RD
+Operand: INPUT
+Errors: None
+
+Source line: 	COMP    ZERO		TEST FOR END OF RECORD (X'00')
+
+Location counter: 66
+Label: 
+Operation: COMP
+Operand: ZERO
+Errors: None
+
+Source line: 	JEQ     EXIT		EXIT LOOP IF EOF
+
+Location counter: 69
+Label: 
+Operation: JEQ
+Operand: EXIT
+Errors: None
+
+Source line: 	STCH    BUFFER,X	STORE CHARCTER IN BUFFER
+
+Location counter: 72
+Label: 
+Operation: STCH
+Operand: BUFFER,X
+Errors: None
+
+Source line: 	TIX     MAXLEN		LOOP UNLESS MAX LENGTH
+
+Location counter: 75
+Label: 
+Operation: TIX
+Operand: MAXLEN
+Errors: None
+
+Source line: 	JLT     RLOOP	  	  HAS BEEN REACHED
+
+Location counter: 78
+Label: 
+Operation: JLT
+Operand: RLOOP
+Errors: None
+
+Source line: EXIT    STX     LENGTH		SAVE RECORD LENGTH
+
+Location counter: 81
+Label: EXIT
+Operation: STX
+Operand: LENGTH
+Errors: None
+
+Source line: 	RSUB                    RETURN TO CALLER
+
+Location counter: 84
+Label: 
+Operation: RSUB
+Operand: RETURN
+Errors: None
+
+Source line: INPUT   BYTE    X'F1'		CODE FOR INPUT DEVICE
+
+Location counter: 85
+Label: INPUT
+Operation: BYTE
+Operand: X'F1'
+Errors: None
+
+Source line: MAXLEN	WORD	4096
+
+Location counter: 85
+Label: MAXLEN
+Operation: WORD
+Operand: 4096
+Errors: None
+
+.
+
+
+.	SUBROUTINE TO WRITE RECORD FROM BUFFER
+
+
+.
+
+
+Source line: WRREC   LDX    ZERO		CLEAR LOOP COUNTER
+
+Location counter: 88
+Label: WRREC
+Operation: LDX
+Operand: ZERO
+Errors: None
+
+Source line: WLOOP   TD     OUTPUT		TEST OUTPUT DEVICE
+
+Location counter: 91
+Label: WLOOP
+Operation: TD
+Operand: OUTPUT
+Errors: None
+
+Source line: 	JEQ    WLOOP		LOOP UNTIL READY
+
+Location counter: 94
+Label: 
+Operation: JEQ
+Operand: WLOOP
+Errors: None
+
+Source line: 	LDCH   BUFFER,X	        GET CHARCTER FROM BUFFER
+
+Location counter: 97
+Label: 
+Operation: LDCH
+Operand: BUFFER,X
+Errors: None
+
+Source line: 	WD     OUTPUT		WRITE CHARACTER
+
+Location counter: 100
+Label: 
+Operation: WD
+Operand: OUTPUT
+Errors: None
+
+Source line: 	TIX    LENGTH		LOOP UNTIL ALL CHARACTERS
+
+Location counter: 103
+Label: 
+Operation: TIX
+Operand: LENGTH
+Errors: None
+
+Source line: 	JLT    WLOOP	  	  HAVE BEEN WRITTEN
+
+Location counter: 106
+Label: 
+Operation: JLT
+Operand: WLOOP
+Errors: None
+
+Source line: 	RSUB                    RETURN TO CALLER
+
+Location counter: 109
+Label: 
+Operation: RSUB
+Operand: RETURN
+Errors: None
+
+Source line: OUTPUT  BYTE   X'05'		CODE FOR OUTPUT DEVICE
+
+Location counter: 110
+Label: OUTPUT
+Operation: BYTE
+Operand: X'05'
+Errors: None
+
+Source line: 	END    FIRST
+
+Location counter: 110
+Label: 
+Operation: END
+Operand: FIRST
+Errors: None
 

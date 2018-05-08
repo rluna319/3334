@@ -105,6 +105,8 @@ bool symSearch(char *);
 void indexOp(char *);
 //gets substring of a char array (string)
 char* substr(char*, int, int);
+//converts instruction into opcode and checks if it's in optable
+void OpConvert(char *);
 
 
 //-----------------------Global Variables---------------------//
@@ -584,12 +586,14 @@ void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
 	bool stop;		//early stop of line?
+	bool empty;		//empty token?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
 	cont = true;
 	stop = false;
+	empty = false;
 
 	//if line is a comment do not tokenize
 	if (line[0] == '.') {
@@ -597,12 +601,13 @@ void Tokenize(char *line)
 		return;
 	}
 
-	if (line[0] == ' ' || line[0] == '\t') tok = 1;
+	if (line[0] == ' ' || line[0] == '\t') tok = i = 1;
 
 	//tokenize loop
 	while (tok < 3)
 	{
 		cont = true;
+		empty = false;
 		int begin = i;
 		memset(token[tok].str, 0, 500);
 
@@ -611,7 +616,25 @@ void Tokenize(char *line)
 			switch (line[i])
 			{
 			case ' ':
+				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
+					cont = false;
+				}
+				else {
+					begin++;
+					empty = true; 
+					i++;
+				}
+			break;
 			case '\t':
+				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
+					cont = false;
+				}
+				else {
+					begin++; 
+					empty = true; 
+					i++;
+				}
+			break;
 			case '\r':
 			case '\v':
 			case '\0':	//if empty char is hit
@@ -622,16 +645,18 @@ void Tokenize(char *line)
 				cont = false;
 				break;
 			default:
+				empty = false;
 				i++;
 			}
 		}
-
+		if (empty){ 
+			tok++;
+		}
 		if (i - begin > 0) {
 			memcpy(token[tok].str, &line[begin], i - begin);
 			token[tok].hastoken = true;
-			tok++;
 		}
-
+		tok++;
 		i++;
 
 		if (stop || tok == 3) break;
@@ -868,6 +893,7 @@ void Pass1()
 		tok3 = token[2].hastoken;
 		tok4 = token[3].hastoken;
 
+		OpConvert(token[1].str);
 		smartLoc();	//get starting address
 
 		if (line[0] == '.')	//if comment only
@@ -887,7 +913,7 @@ void Pass1()
 				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
-			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
+			if (strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
 				fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
@@ -924,11 +950,11 @@ void Pass1()
 		fgets(ErrorLine, 100, Errors);
 		fclose(Errors);
 		Errors = fopen(ErrFile, "w");
-		fprintf(intermediate, "%s", ErrorLine);
-		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		fprintf(intermediate, "%s\n\n", ErrorLine);
+		if (strlen(ErrorLine) < 9) fprintf(intermediate, "Errors: None\n\n");
 		else fprintf(intermediate, "\n\n");
 		fprintf(Errors, "\n");
-    memset(ErrorLine, '/0', 100);
+    	memset(ErrorLine, '\0', 100);
 	}
 
 	while (!feof(source) && !stop)
@@ -972,9 +998,7 @@ void Pass1()
 
 		}
 
-		//Test print
-		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
-
+		OpConvert(token[1].str);
 		smartLoc();
 
 		if (locctr > 32768){	//program too long ** Error
@@ -996,10 +1020,10 @@ void Pass1()
 		Errors = fopen(ErrFile, "w");
 		fgets(ErrorLine, 100, Errors);
 		fprintf(intermediate, "%s", ErrorLine);
-		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		if (strlen(ErrorLine) < 9) fprintf(intermediate, "Errors: None\n\n");
 		else fprintf(intermediate, "\n\n");
 		fprintf(Errors, "\n");
-    memset(ErrorLine, '\0', 100);
+    	memset(ErrorLine, '\0', 100);
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
@@ -1029,5 +1053,21 @@ void Pass1()
 	fclose(symboltable);
 	fclose(Errors);
 	remove(ErrFile);
+}
+
+void OpConvert(char *OP)
+{
+	for (int i = 0; i < 31; i++){
+		if (OP == OPTAB[i].instruction){
+
+			if (i > 24){return;} //OPTAB[25->30] are directives so do nothing
+			else { //change OP to it's corresponding opcode
+				sprintf(OP, "%02X", OPTAB[i].opcode);						
+				return;
+			}
+		}
+	}
+
+	fprintf(Errors, "2 ");	//illegal operation
 }
 
