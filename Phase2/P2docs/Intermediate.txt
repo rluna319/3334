@@ -1,0 +1,64 @@
+Source line: COPY    START   1000		COPY FILE FROM INPUT TO OUTPUT
+
+Location counter: 1000
+Label: COPY
+Operation: START
+Operand: 1000
+Errors: None
+
+Source line: FIRST   STL     RETADR		SAVE RETURN ADDRESS
+
+Location counter: 1003
+Label: FIRST
+Operation: STL
+Operand: RETADR
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000None
+
+Source line: CLOOP   JSUB    RDREC		READ INPUT RECORD
+
+Location counter: 1006
+Label: CLOOP
+Operation: JSUB
+Operand: RDREC
+None
+
+Source line: 	LDA	LENGTH		TEST FOR EOF (LENGTH = 0)
+
+Location counter: 1009
+Label: 
+Operation: LDA
+Operand: LENGTH
+None
+
+Source line: 	COMP    ZERO
+
+Location counter: 1012
+Label: 
+Operation: COMP
+Operand: ZERO
+None
+
+Source line: 	JEQ     ENDFIL		EXIT IF EOF FOUND
+
+Location counter: 1015
+Label: 
+Operation: JEQ
+Operand: ENDFIL
+None
+
+Source line: 	JSUB	WRREC		WRITE OUTPUT RECORD
+
+Location counter: 1018
+Label: 
+Operation: JSUB
+Operand: WRREC
+None
+
+Source line: 	J       CLOOP		LOOP
+
+Location counter: 1021
+Label: 
+Operation: J
+Operand: CLOOP
+None
+
