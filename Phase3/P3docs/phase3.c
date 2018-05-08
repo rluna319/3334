@@ -861,12 +861,14 @@ void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
 	bool stop;		//early stop of line?
+	bool empty;		//empty token?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
 	cont = true;
 	stop = false;
+	empty = false;
 
 	//if line is a comment do not tokenize
 	if (line[0] == '.') {
@@ -874,12 +876,13 @@ void Tokenize(char *line)
 		return;
 	}
 
-	if (line[0] == ' ' || line[0] == '\t') tok = 1;
+	if (line[0] == ' ' || line[0] == '\t') tok = i = 1;
 
 	//tokenize loop
 	while (tok < 3)
 	{
 		cont = true;
+		empty = false;
 		int begin = i;
 		memset(token[tok].str, 0, 500);
 
@@ -888,7 +891,25 @@ void Tokenize(char *line)
 			switch (line[i])
 			{
 			case ' ':
+				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
+					cont = false;
+				}
+				else {
+					begin++;
+					empty = true; 
+					i++;
+				}
+			break;
 			case '\t':
+				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
+					cont = false;
+				}
+				else {
+					begin++; 
+					empty = true; 
+					i++;
+				}
+			break;
 			case '\r':
 			case '\v':
 			case '\0':	//if empty char is hit
@@ -899,16 +920,18 @@ void Tokenize(char *line)
 				cont = false;
 				break;
 			default:
+				empty = false;
 				i++;
 			}
 		}
-
+		if (empty){ 
+			tok++;
+		}
 		if (i - begin > 0) {
 			memcpy(token[tok].str, &line[begin], i - begin);
 			token[tok].hastoken = true;
-			tok++;
 		}
-
+		tok++;
 		i++;
 
 		if (stop || tok == 3) break;
@@ -920,7 +943,7 @@ char* substr(char* string, int pos, int length)
 	char sub[100];
 	int c = 0;
 	while (c < length) {
-		sub[c] = string[pos+c];
+		sub[c] = string[pos+c-1];
 		c++;
 	}
 	sub[c] = '\0';
@@ -939,8 +962,7 @@ void T_clear()
 {
 	for (int i = 0; i < 4; i++)
 	{
-		//strcpy(token[i].str, "\0");
-		memset(token[i].str, '\0', strlen(token[i].str));
+		strcpy(token[i].str, "\0");
 		token[i].hastoken = false;
 	}
 }
@@ -950,7 +972,6 @@ void S_clear()
 	for (int i = 0; i < 500; i++)
 	{
 		memset(SYMTAB[i].label, ' ', 6);
-		SYMTAB[i].address = -2;
 	}
 }
 
@@ -995,9 +1016,8 @@ void symInsert(char *label, long addr)
 				SYM = 0;	//reset pointer
 			}
 			else {	//error duplicate label ** Error 0
-				strcat(Errors, "0 ");
+				fprintf(Errors, "0 ");
 				ErrorCount++;
-				CEC++;
 				SYM = 0;	//reset pointer
 			}
 		}
@@ -1040,9 +1060,8 @@ void smartLoc()
         return;
     }
     else {  //invalid empty operand ** Error 2
-        strcat(Errors, "2A ");
+        fprintf(Errors, "2 ");
         ErrorCount++;
-        CEC++;
         return;
     }
 
@@ -1050,26 +1069,23 @@ void smartLoc()
 		locctr = operand;
 	}
 	else if (strcmp(token[1].str, "RESB") == 0){
-		if (isdigit(operand) != 0){	//check if operand is int
-			strcat(Errors, "2B ");
+		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
+			fprintf(Errors, "2 ");
 			ErrorCount++;
-			CEC++;
 		}
 		else locctr += operand;
 	}
 	else if (strcmp(token[1].str, "RESW") == 0){
-		if (isdigit(operand) != 0){	//check if operand is int
-			strcat(Errors, "2C ");
+		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
+			fprintf(Errors, "2 ");
 			ErrorCount++;
-			CEC++;
 		}
 		else locctr += (3 * operand);
 	}
 	else if (strcmp(token[1].str, "WORD") == 0){
-		if (isdigit(operand) != 0){	//check if operand is int
-			strcat(Errors, "2D ");
+		if (isdigit(atoi(token[2].str)) == 0){	//check if operand is int
+			fprintf(Errors, "2 ");
 			ErrorCount++;
-			CEC++;
 		}
 		else locctr += 3;
 	}
@@ -1078,25 +1094,22 @@ void smartLoc()
 
 		//check for single quotes (i.e. X'4F') 
 		if (token[2].str[1] != '\'' || token[2].str[oplen - 1] != '\''){
-			strcat(Errors, "2E ");
+			fprintf(Errors, "2 ");
 			ErrorCount++;
-			CEC++;
 			return;
 		}
 		if (token[2].str[0] == 'C') locctr += digits;
-		else if (token[2].str[0] == 'X'){
+		if (token[2].str[0] == 'X'){
 			if (digits % 2 == 1) {	//error: odd number of digits when using X ** Error 2
-				strcat(Errors, "2F ");
+				fprintf(Errors, "2 ");
 				ErrorCount++;
-				CEC++;
 			 	return;
 			 }	
 			else locctr += digits/2;
 		}
 		else {	//invalid operand ** Error 2
-			strcat(Errors, "2G ");
+			fprintf(Errors, "2 ");
 			ErrorCount++;
-			CEC++;
 		}	
 	}
 	else if (strcmp(token[1].str, "END") == 0){
@@ -1113,9 +1126,8 @@ void indexOp(char *Operand)
 	int comma = strcspn(Operand, ",");
 	if (Operand[oplen - 2] == ','){
 		if (Operand[comma] != 'X'){	//invalid operand if not X ??? does it have to be X???
-			strcat(Errors, "2H ");
-			ErrorCount++;
-			CEC++;
+			fprintf(Errors, "2 ");
+			ErrorCount++; 
 		}
 	}
 	else return;
@@ -1125,7 +1137,11 @@ void Pass1()
 {
 	bool begin = false;				//has start been called?
 	bool stop = false;				//has stop of source file been
+	//int length;						//length of line
 	bool tok1, tok2, tok3, tok4;	//does token exist?
+	//char label[6];					//stores label to input as parameter
+	char ErrorLine[100];			//stores Error line in Errors to print to intermediate file
+	char ErrFile[20] = "Error.tmp";
 
 	//clear SymbolTable and 'line[]'
 	S_clear();
@@ -1136,8 +1152,8 @@ void Pass1()
 	while(!feof(source) && !begin)
 	{	
 		//open tmp file to push errors to
-		memset(Errors, '\0', 128);
-		CEC = 0;
+		Errors = fopen(ErrFile, "w");
+		fprintf(Errors, "Errors: ");
 
 		fgets(line, 500, source);	//read in source line
 
@@ -1168,36 +1184,31 @@ void Pass1()
 				symInsert(token[0].str, locctr);
 			}
 			if (!tok2){	//missing operation ** Error 2
-				strcat(Errors, "2I ");
-				ErrorCount++;
-				CEC++; 
+				fprintf(Errors, "2 ");
+				ErrorCount++; 
 			}
-			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
-				strcat(Errors, "2J ");
+			if (strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
+				fprintf(Errors, "2 ");
 				ErrorCount++;
-				CEC++;
 			}
 			else if (tok2 && strcmp(token[1].str, "START") == 0)
 			{
 				if(!tok3){ //missing starting address ** Error 4
-					strcat(Errors, "4 ");
+					fprintf(Errors, "4 ");
 					ErrorCount++;
-					CEC++;
 				} 
 			}
 			if (!tok1 && !tok3 && tok2)	//RSUB
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					strcat(Errors, "1 ");
+					fprintf(Errors, "1 ");
 					ErrorCount++;
-					CEC++;
 				}
 			}
 			if (strcmp(token[1].str, "RSUB") == 0 && tok3){ //invalid operation ** Error 1
-				strcat(Errors, "1 ");
+				fprintf(Errors, "1 ");
 				ErrorCount++;
-				CEC++;
 			}
 		}
 
@@ -1207,17 +1218,24 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fprintf(intermediate, "Errors: %s", Errors);
-		if (CEC == 0) fprintf(intermediate, "None\n\n");
+		//fprintf(intermediate, "Errors: (NOT READY)\n\n");
+	  	fclose(Errors);
+		Errors = fopen(ErrFile, "r");
+		fgets(ErrorLine, 100, Errors);
+		fclose(Errors);
+		Errors = fopen(ErrFile, "w");
+		fprintf(intermediate, "%s\n\n", ErrorLine);
+		if (strlen(ErrorLine) < 9) fprintf(intermediate, "Errors: None\n\n");
 		else fprintf(intermediate, "\n\n");
-		strcat(Errors, "\n");
+		fprintf(Errors, "\n");
+    	memset(ErrorLine, '\0', 100);
 	}
 
 	while (!feof(source) && !stop)
 	{
 		//open tmp file to push errors to
-		memset(Errors, '\0', 128);
-		CEC = 0;
+		fprintf(Errors, "Errors: ");
+
 		fgets(line, 500, source);	//read in source line
 
 		//Test print
@@ -1247,23 +1265,18 @@ void Pass1()
 			{
 				//if this combination exists then the directive should be RSUB
 				if (strcmp(token[1].str, "RSUB") == 1){ //invalid operation ** Error 1
-					strcat(Errors, "1 ");
+					fprintf(Errors, "1 ");
 					ErrorCount++;
-					CEC++;
 				}
 			}
 
 		}
 
-		//Test print
-		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
-
 		smartLoc();
 
 		if (locctr > 32768){	//program too long ** Error
-			strcat(Errors, "7 ");
+			fprintf (Errors, "7 ");
 			ErrorCount++;
-			CEC++;
 			break;
 		}
 
@@ -1273,18 +1286,24 @@ void Pass1()
 		fprintf(intermediate, "Label: %s\n", token[0].str);
 		fprintf(intermediate, "Operation: %s\n", token[1].str);
 		fprintf(intermediate, "Operand: %s\n", token[2].str);
-		fprintf(intermediate, "Errors: %s", Errors);
-		if (CEC == 0) fprintf(intermediate, "None\n\n");
+		//fprintf(intermediate, "Errors: (NOT READY)\n\n");
+	  	fclose(Errors);
+		Errors = fopen(ErrFile, "r");
+		fclose(Errors);
+		Errors = fopen(ErrFile, "w");
+		fgets(ErrorLine, 100, Errors);
+		fprintf(intermediate, "%s", ErrorLine);
+		if (strlen(ErrorLine) < 9) fprintf(intermediate, "Errors: None\n\n");
 		else fprintf(intermediate, "\n\n");
-		strcat(Errors, "\n");
+		fprintf(Errors, "\n");
+    	memset(ErrorLine, '\0', 100);
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
 
 	if (strcmp(token[1].str, "END") != 0){		//invalid or missing END directve ** Error 5
-		strcat(Errors, "5 ");
+		fprintf(Errors, "5 ");
 		ErrorCount++;
-		CEC++;
 	}
 
 	//print to symbol table
@@ -1305,6 +1324,8 @@ void Pass1()
 	fclose(source);
 	fclose(intermediate);
 	fclose(symboltable);
+	fclose(Errors);
+	remove(ErrFile);
 }
 
 void Pass2()

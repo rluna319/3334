@@ -875,12 +875,14 @@ void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
 	bool stop;		//early stop of line?
+	bool empty;		//empty token?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
 	cont = true;
 	stop = false;
+	empty = false;
 
 	//if line is a comment do not tokenize
 	if (line[0] == '.') {
@@ -888,12 +890,13 @@ void Tokenize(char *line)
 		return;
 	}
 
-	if (line[0] == ' ' || line[0] == '\t') tok = 1;
+	if (line[0] == ' ' || line[0] == '\t') tok = i = 1;
 
 	//tokenize loop
 	while (tok < 3)
 	{
 		cont = true;
+		empty = false;
 		int begin = i;
 		memset(token[tok].str, 0, 500);
 
@@ -902,7 +905,25 @@ void Tokenize(char *line)
 			switch (line[i])
 			{
 			case ' ':
+				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
+					cont = false;
+				}
+				else {
+					begin++;
+					empty = true; 
+					i++;
+				}
+			break;
 			case '\t':
+				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
+					cont = false;
+				}
+				else {
+					begin++; 
+					empty = true; 
+					i++;
+				}
+			break;
 			case '\r':
 			case '\v':
 			case '\0':	//if empty char is hit
@@ -913,16 +934,18 @@ void Tokenize(char *line)
 				cont = false;
 				break;
 			default:
+				empty = false;
 				i++;
 			}
 		}
-
+		if (empty){ 
+			tok++;
+		}
 		if (i - begin > 0) {
 			memcpy(token[tok].str, &line[begin], i - begin);
 			token[tok].hastoken = true;
-			tok++;
 		}
-
+		tok++;
 		i++;
 
 		if (stop || tok == 3) break;
@@ -1178,7 +1201,7 @@ void Pass1()
 				fprintf(Errors, "2 ");
 				ErrorCount++; 
 			}
-			if (tok2 && strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
+			if (strcmp(token[1].str, "START") == 1){ //invalid operation ** Error 2
 				fprintf(Errors, "2 ");
 				ErrorCount++;
 			}
@@ -1215,10 +1238,11 @@ void Pass1()
 		fgets(ErrorLine, 100, Errors);
 		fclose(Errors);
 		Errors = fopen(ErrFile, "w");
-		fprintf(intermediate, "%s", ErrorLine);
-		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		fprintf(intermediate, "%s\n\n", ErrorLine);
+		if (strlen(ErrorLine) < 9) fprintf(intermediate, "Errors: None\n\n");
 		else fprintf(intermediate, "\n\n");
 		fprintf(Errors, "\n");
+    	memset(ErrorLine, '\0', 100);
 	}
 
 	while (!feof(source) && !stop)
@@ -1262,9 +1286,6 @@ void Pass1()
 
 		}
 
-		//Test print
-		//printf("Tokens:\n\t1: %s\n\t2: %s\n\t3: %s\n\t4: %s\n", token[0].str, token[1].str, token[2].str, token[3].str);
-
 		smartLoc();
 
 		if (locctr > 32768){	//program too long ** Error
@@ -1286,9 +1307,10 @@ void Pass1()
 		Errors = fopen(ErrFile, "w");
 		fgets(ErrorLine, 100, Errors);
 		fprintf(intermediate, "%s", ErrorLine);
-		if (ErrorCount == 0) fprintf(intermediate, "None\n\n");
+		if (strlen(ErrorLine) < 9) fprintf(intermediate, "Errors: None\n\n");
 		else fprintf(intermediate, "\n\n");
 		fprintf(Errors, "\n");
+    	memset(ErrorLine, '\0', 100);
 
 		if (strcmp(token[1].str, "END") == 0) break;
 	}
@@ -1317,5 +1339,358 @@ void Pass1()
 	fclose(intermediate);
 	fclose(symboltable);
 	fclose(Errors);
+	remove(ErrFile);
+}
+
+void Pass2()
+{
+	printf("\nBeginning Pass 2...\n");
+
+	//open intermediate and symbol table files
+	intermediate = fopen(I_fname, "r");
+	symboltable = fopen(ST_fname, "r");
+
+	//make names for the object and listing file
+	int p = strcspn(progName, ".");
+	char *pNameO = strcat(substr(progName, 0, p), "_obj.txt");
+	char *pNameL = strcat(substr(progName, 0, p), "_list.txt");
+
+	obj = fopen(pNameO, "w");	//program name with .obj extension (Object file)
+	list = fopen(pNameL, "w");	//program name with .list extension (Listing file)
+
+	char T_Record[128];		//for printing to object file
+	char ObjCode[128];		//object code representing in hex
+	char oField[128];		//field for data or instruction 
+
+	int fieldLen = 0;           // length of current field read from .int file
+	int objLen = 0;             // length of object code in a text record
+	bool atEnd = false;			// if END has been hit
+	bool atRes = false;			// if RESW/RESB as been hit
+	bool newText = false;		// if new text record is needed
+	bool end;	                
+	bool finishLine = false;
+	int addr = 0;               // the value of the 16-bit address field
+	int nBytes = 0;
+	int indexBit = 32768;       // 2^15 (sets 16th bit)
+
+	//In intermediate file... [] indicates chars before data/instruction
+	//IFL[0] line 1 = [13] Source Line: *source line
+	//IFL[1] line 2 = [00] (blank)
+	//IFL[2] line 3 = [18] Location counter: *location counter
+	//IFL[3] line 4 = [07] Label: *label
+	//IFL[4] line 5 = [11] Instruction: *instruction
+	//IFL[5] line 6 = [09] Operand: *operand
+	//IFL[6] line 7 = [08] Errors: *error numbers separated by spaces
+	//IFL[7] line 8 = [00] (blank)
+
+	while(!feof(intermediate))
+	{
+		getlines();	  //IFL gets incremented 8 times here unless its a comment
+		OpConvert(IFL[4]);	//converts non-directive instructions into their opcodes
+		int i = 0;	//used for inner while loop (resets every outter loop iteration)
+
+		if (strcmp(IFL[4], "START") == 0){
+			progStart = atoi(IFL[5]);
+		}
+
+		fprintf(list, "Errors: \n\n");
+		//if there are errors output them
+		while(strcmp(IFL[6], "None") != 0 && !end){
+			char num = IFL[6][i++];
+
+			switch(num){
+				case '0':
+					fprintf(list, "%s\n", Error[0].output);
+					break;
+
+				case '1':
+					fprintf(list, "%s\n", Error[1].output);
+					break;
+
+				case '2':
+					fprintf(list, "%s\n", Error[2].output);
+					break;
+
+				case '3':
+					fprintf(list, "%s\n", Error[3].output);
+					break;
+
+				case '4':
+					fprintf(list, "%s\n", Error[4].output);
+					break;
+
+				case '5':
+					fprintf(list, "%s\n", Error[5].output);
+					break;
+
+				case '6':
+					fprintf(list, "%s\n", Error[6].output);
+					break;
+
+				case '7':
+					fprintf(list, "%s\n", Error[7].output);
+					break;
+
+				case '8':
+					fprintf(list, "%s\n", Error[8].output);
+					break;
+
+				case '9':
+					fprintf(list, "%s\n", Error[9].output);
+					break;
+
+				case '\0':
+					end = true;
+					break;
+
+				default:
+					fprintf(list, "	|Unkown Error| \n");
+					break;
+			}
+		}
+
+		fprintf(list, "\nObject Code: \n");
+		addr = 0;
+
+		//IFL indicies 3,4,5 represent Label, Instruction, Operand respectively
+		if (ErrorCount == 0){
+			addr = 0;
+			if (strcmp(IFL[4], "START") == 0){
+				fprintf(obj, "H%6s", IFL[3]);	//H[program name 6 chars][start address][program length]
+				fprintf(obj, "%6X", progStart);
+				fprintf(obj, "%6X\n", progLen);
+				atRes = false;
+			}
+			else if(strcmp(IFL[4], "RESB") == 0 || strcmp(IFL[4], "RESW") == 0){
+				fieldLen = 0;
+				if(!atRes){
+					newText = true;
+					finishLine = true;
+				}
+				atRes = true;
+			}
+			else if (strcmp(IFL[4], "BYTE") == 0){
+				atRes = false;
+				if (IFL[5][0] == 'C'){
+					fieldLen = (strlen(IFL[5]) - 3)*2;
+					//get the nums between the '' i.e.--> C'23'
+					int x = 0;
+					x = strlen(IFL[5]) - 3;
+
+					char OPP[x];
+					memset(OPP, '\0', x);
+					strcpy(OPP, substr(IFL[5], 2, x));
+
+					char oprnd[x*2];
+
+					for (int i = 0; i < strlen(OPP); i++){
+						sprintf(oprnd+i*2, "%02X", OPP[i]);
+					}
+					
+					strcat(oField, oprnd);
+				}
+				else{
+					fieldLen = strlen(IFL[5]) - 3;
+					strcat(oField, substr(IFL[5], 2, strlen(IFL[5] - 3)));		//WATCH (this is already in hex)
+				}
+			}
+			else if (strcmp(IFL[4], "WORD") == 0){
+				atRes = false;
+				fieldLen = 6; 	//one word is 6 hex digits
+				addr = strtol(IFL[5], NULL, 10);
+				char oprnd[6];
+				sprintf(oprnd, "%06X", addr);
+				strcat(oField, oprnd);		//WATCH
+			}
+			else if (strcmp(IFL[4], "END") == 0) {
+				atRes = false;
+				atEnd = true;
+				fieldLen = 0;
+			}
+			else {	//regular instruction
+				atRes = false;
+				fieldLen = 6;
+				bool indx = false;
+				if (strcmp(IFL[4], "4C") != 0){	//if not RSUB
+					if(strlen(IFL[5])>1){
+						int x = strlen(IFL[5]) - 2;
+						if(strcmp(substr(IFL[5], x, 2), ",X") == 0){
+							addr = indexBit;
+							char *O = malloc(sizeof(char)*x);
+							O = substr(IFL[5],0,x);
+							addr += SymAddr(O);		//returns -2 if address not found
+						}
+
+						addr += SymAddr(IFL[5]);
+
+						if (addr == -1) addr = 0;
+					}
+					char oprnd[4];
+					sprintf(oprnd, "%04X", addr);
+					strcat(oField, oprnd);		//WATCH
+				}
+			}
+
+			if((objLen + fieldLen) > 60 || atEnd || (atRes && finishLine)){
+				if (atRes) finishLine = false;
+				if (atEnd){
+					objLen += fieldLen;
+
+					char OBJ[strlen(ObjCode) + 2];
+					sprintf(OBJ, "%02X%s", (objLen/2), ObjCode);
+					strcat(T_Record, OBJ);		//WATCH
+					
+					fprintf(obj, "%s\n", T_Record);						
+
+					objLen = 0;
+				}
+			}
+
+			if ((objLen == 0 || newText) && !atRes){
+				memset(ObjCode, '\0', 128);
+				memset(T_Record, '\0', 128);
+				sprintf(T_Record, "T%06X", atoi(IFL[2]));		//IFL[2] = location counter
+				newText = false;
+			}
+
+			int X = 0;
+			if (fieldLen > strlen(oField)){
+				X = fieldLen - strlen(oField);
+			}
+			char fill[X];
+			memset(fill, '0', X);
+			char Oprint[fieldLen];
+			sprintf(Oprint, "%s%X", fill, atoi(oField));
+			strcat(ObjCode, Oprint);									//WATCH
+			objLen += fieldLen;
+
+			fprintf(list, "%s%s", fill, oField);
+
+			memset(oField, '\0', 128);
+		}
+
+		fprintf(list, "\n\tLoad Address: %X\n", atoi(IFL[2]));
+
+		//fprintf(list, "\n");
+	}
+
+	bool missingAddr = false;
+
+	fprintf(list, "\n");
+
+	for(int i = 0; i < 500; i++){
+		if (SYMTAB[i].address == -2){
+			if(SYMTAB[i].address == -1){
+				missingAddr = true;
+				fprintf(list, "!Label Undefined: %s\n", SYMTAB[i].label);
+			}
+		}
+	}
+
+	fclose(list);
+	//inf.close();
+
+	printf("\nPass 2 complete...\n");
+
+	if(atEnd && ErrorCount == 0) {
+		fprintf(obj, "E%06X", progStart	);
+		fclose(obj);
+		printf("\tObject File --> %s\n", pNameO);
+		printf("\tListing File --> %s\n\n", pNameL);
+	}
+	else {
+		fclose(obj);
+		remove(pNameO);
+		printf("\n!!!	Errors prevented object file creation...\n");
+		printf("\tView listing file...\n\n");
+		printf("\tPASS 2 IS BROKEN...I TRIED...*SIGH*...\n\n");
+	}
+}
+
+void getlines()
+{		
+		char tstr[128];		//tmp string
+		memset(tstr, '\0', 128);
+
+		//line 1
+		fgets(tstr, 128, intermediate);
+		strcpy(IFL[0], substr(tstr, 13, strlen(tstr)));
+		IFL[0][strlen(IFL[0]) - 1] = '\0'; 
+		memset(tstr, '\0', 128);
+
+		//when reaching a comment the first line is either a space or '.'
+		//skip it
+		while(IFL[0][0] == ' ' || IFL[0][0] == '.'){
+			fgets(tstr, 128, intermediate);
+			strcpy(IFL[0], substr(tstr, 13, strlen(tstr)));
+			IFL[0][strlen(IFL[0]) - 1] = '\0'; 
+			memset(tstr, '\0', 128);
+		}
+
+		//line 2 (blank)
+		fgets(tstr, 128, intermediate);
+		IFL[1][0] = '\0';
+		memset(tstr, '\0', 128);
+		//line 3
+		fgets(tstr, 128, intermediate);
+		strcpy(IFL[2], substr(tstr, 18, strlen(tstr)));
+		IFL[2][strlen(IFL[2]) - 1] = '\0'; 
+		memset(tstr, '\0', 128);
+		//line 4
+		fgets(tstr, 128, intermediate);
+		strcpy(IFL[3], substr(tstr, 7, strlen(tstr)));
+		IFL[3][strlen(IFL[3]) - 1] = '\0'; 
+		memset(tstr, '\0', 128);
+		//line 5
+		fgets(tstr, 128, intermediate);
+		strcpy(IFL[4], substr(tstr, 11, strlen(tstr)));
+		IFL[4][strlen(IFL[4]) - 1] = '\0'; 
+		memset(tstr, '\0', 128);
+		//line 6
+		fgets(tstr, 128, intermediate);
+		strcpy(IFL[5], substr(tstr, 9, strlen(tstr) - 1));
+		IFL[5][strlen(IFL[5]) - 1] = '\0'; 
+		memset(tstr, '\0', 128);
+		//line 7
+		fgets(tstr, 128, intermediate);
+		strcpy(IFL[6], substr(tstr, 8, strlen(tstr)));
+		IFL[6][strlen(IFL[6]) - 1] = '\0'; 
+		memset(tstr, '\0', 128);
+
+		fgets(tstr, 128, intermediate);
+		IFL[7][0] = '\0';		
+		memset(tstr, '\0', 128);
+
+}
+
+int SymAddr(char *LABEL)	//returns -2 if address is not found
+{
+	if (SYMTAB[0].label[0] == '\0' && SYMTAB[0].address == -2) return false;
+
+	//loop through and check if label exists
+	for (int i = 0; i < 500; i++){ 
+		if (strcmp(LABEL, SYMTAB[i].label) == 0){
+			return SYMTAB[i].address;
+		}
+	}
+
+	return -2;
+
+}
+
+void OpConvert(char *OP)
+{
+	for (int i = 0; i < 31; i++){
+		if (OP == OPTAB[i].instruction){
+
+			if (i > 24){return;} //OPTAB[25->30] are directives so do nothing
+			else { //change OP to it's corresponding opcode
+				sprintf(OP, "%02X", OPTAB[i].opcode);							//WATCH
+				return;
+			}
+		}
+	}
+
+	strcpy(OP, "!ERR!");	//if OPCODE is not found OP = !ERR!
 }
 

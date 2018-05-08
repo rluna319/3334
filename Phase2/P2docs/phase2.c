@@ -893,7 +893,6 @@ void Pass1()
 		tok3 = token[2].hastoken;
 		tok4 = token[3].hastoken;
 
-		OpConvert(token[1].str);
 		smartLoc();	//get starting address
 
 		if (line[0] == '.')	//if comment only
@@ -998,7 +997,6 @@ void Pass1()
 
 		}
 
-		OpConvert(token[1].str);
 		smartLoc();
 
 		if (locctr > 32768){	//program too long ** Error
@@ -1055,19 +1053,4 @@ void Pass1()
 	remove(ErrFile);
 }
 
-void OpConvert(char *OP)
-{
-	for (int i = 0; i < 31; i++){
-		if (OP == OPTAB[i].instruction){
-
-			if (i > 24){return;} //OPTAB[25->30] are directives so do nothing
-			else { //change OP to it's corresponding opcode
-				sprintf(OP, "%02X", OPTAB[i].opcode);						
-				return;
-			}
-		}
-	}
-
-	fprintf(Errors, "2 ");	//illegal operation
-}
 
