@@ -586,14 +586,12 @@ void Tokenize(char *line)
 {
 	bool cont;		//continue loop?
 	bool stop;		//early stop of line?
-	bool empty;		//empty token?
 	int tok = 0; 	//index var for 'token[]'
 	int i = 0;		//index var for 'line[]'
 
 	T_clear();
 	cont = true;
 	stop = false;
-	empty = false;
 
 	//if line is a comment do not tokenize
 	if (line[0] == '.') {
@@ -601,13 +599,12 @@ void Tokenize(char *line)
 		return;
 	}
 
-	if (line[0] == ' ' || line[0] == '\t') tok = i = 1;
+	if (line[0] == ' ' || line[0] == '\t') tok = 1;
 
 	//tokenize loop
 	while (tok < 3)
 	{
 		cont = true;
-		empty = false;
 		int begin = i;
 		memset(token[tok].str, 0, 500);
 
@@ -616,25 +613,7 @@ void Tokenize(char *line)
 			switch (line[i])
 			{
 			case ' ':
-				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
-					cont = false;
-				}
-				else {
-					begin++;
-					empty = true; 
-					i++;
-				}
-			break;
 			case '\t':
-				if (line[i - 1] != ' ' && line[i - 1] != '\t'){
-					cont = false;
-				}
-				else {
-					begin++; 
-					empty = true; 
-					i++;
-				}
-			break;
 			case '\r':
 			case '\v':
 			case '\0':	//if empty char is hit
@@ -645,18 +624,16 @@ void Tokenize(char *line)
 				cont = false;
 				break;
 			default:
-				empty = false;
 				i++;
 			}
 		}
-		if (empty){ 
-			tok++;
-		}
+
 		if (i - begin > 0) {
 			memcpy(token[tok].str, &line[begin], i - begin);
 			token[tok].hastoken = true;
+			tok++;
 		}
-		tok++;
+
 		i++;
 
 		if (stop || tok == 3) break;
